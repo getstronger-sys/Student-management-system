@@ -1,6 +1,6 @@
 # 学生管理系统
 
-一个基于Python和PyQt5开发的学生管理系统，支持管理员、教师和学生三种角色，实现了用户管理、学生信息管理、课程管理和成绩管理等功能。
+一个基于Python和PyQt5开发的学生管理系统，支持管理员、教师和学生三种角色，实现了用户管理、学生信息管理、课程管理和成绩管理等功能。系统采用客户端-服务器架构，支持多用户同时访问和数据共享。
 
 ## 系统架构
 
@@ -48,6 +48,10 @@ docker-compose up -d
 - 确保已安装MySQL数据库
 - 修改`config/config.py`中的数据库配置
 
+#### 数据库共享配置
+
+系统支持数据库共享，允许团队成员通过网络访问同一数据库。详见`database_sharing_guide.md`文件了解详细配置方法。
+
 ### 3. 初始化数据库
 
 ```powershell
@@ -82,17 +86,39 @@ python main.py
 
 ```
 student_management_system/
+├── .gitignore         # Git忽略文件规则
+├── README.md          # 项目说明文档
 ├── config/            # 配置文件
+│   └── config.py      # 系统配置（数据库连接等）
 ├── database/          # 数据库管理模块
-├── models/            # 数据模型和业务逻辑
-├── network/           # 网络通信模块
-├── ui/                # 用户界面模块
-├── utils/             # 工具函数
+│   └── db_manager.py  # 数据库操作类
+├── database_sharing_guide.md  # 数据库共享配置指南
 ├── docker-compose.yml # Docker配置文件
 ├── init_database.py   # 数据库初始化脚本
 ├── main.py            # 主程序入口
+├── models/            # 数据模型和业务逻辑
+│   ├── courses.py     # 课程相关模型
+│   ├── scores.py      # 成绩相关模型
+│   ├── student.py     # 学生相关模型
+│   ├── teacher.py     # 教师相关模型
+│   └── user.py        # 用户相关模型
+├── network/           # 网络通信模块
+│   ├── client.py      # 客户端通信
+│   └── server.py      # 服务器通信
 ├── requirements.txt   # 项目依赖
-└── README.md          # 项目说明文档
+├── todo_list.md       # 待办事项列表
+├── ui/                # 用户界面模块
+│   ├── admin_dashboard.py   # 管理员界面
+│   ├── login_window.py      # 登录界面
+│   ├── main_window.py       # 主窗口
+│   ├── student_dashboard.py # 学生界面
+│   ├── teacher_dashboard.py # 教师界面
+│   └── user_profile.py      # 用户信息界面
+├── use_guide.md       # 使用指南
+└── utils/             # 工具函数
+    ├── __init__.py
+    ├── common_utils.py      # 通用工具函数
+    └── data_visualization.py # 数据可视化工具
 ```
 
 ## 开发说明
@@ -117,6 +143,10 @@ student_management_system/
 - 添加Docker支持，便于快速部署开发环境
 - 完善数据库初始化脚本，确保测试数据正确插入
 - 优化错误处理和日志记录机制
+- 创建共享数据库用户，支持多用户协作开发
+- 项目已上传至GitHub仓库，方便团队协作和版本管理
+- 优化README.md文档结构，添加更详细的项目结构说明
+- 新增数据库共享配置指南文件
 
 ## 联系方式
 
