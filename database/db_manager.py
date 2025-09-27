@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""数据库管理模块，处理数据库连接和基本操作"""
+
+import pymysql
+from pymysql.cursors import DictCursor
+from config.config import DB_CONFIG
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('db_manager')
+
+
+class DatabaseManager:
+    """数据库管理类，封装数据库操作"""
+    
+    def __init__(self):
+        """初始化数据库连接"""
+        self.connection = None
+        self.cursor = None
+        self.connect()
+    
+    def connect(self):
+        """建立数据库连接"""
+        try:
+            self.connection = pymysql.connect(
+                host=DB_CONFIG['host'],
+                user=DB_CONFIG['user'],
+                password=DB_CONFIG['password'],
+                database=DB_CONFIG['database'],
+                port=DB_CONFIG['port'],
+                cursorclass=DictCursor,
+                autocommit=True
+            )
+            self.cursor = self.connection.cursor()
+            logger.info("数据库连接成功")
+        except Exception as e:
+            logger.error(f"数据库连接失败: {e}")
+            # 如果数据库不存在，尝试创建
+            if 'Unknown database' in str(e):
+                self._create_database()
+    
+    def _create_database(self):
+        """创建数据库和表结构"""
+        try:
+            # 先连接MySQL服务器
+            temp_conn = pymysql.connect(
+                host=DB_CONFIG['host'],
+                user=DB_CONFIG['user'],
+                password=DB_CONFIG['password'],
+                port=DB_CONFIG['port'],
+                cursorclass=DictCursor
+            )
+            temp_cursor = temp_conn.cursor()
+            
+            # 创建数据库
+            temp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+            temp_conn.select_db(DB_CONFIG['database'])
+            
+            # 创建用户表
+            temp_cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    username VARCHAR(50) UNIQUE NOT NULL,
+                    password VARCHAR(100) NOT NULL,
+                    role VARCHAR(20) NOT NULL,
+                    name VARCHAR(50) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # 创建学生表
+            temp_cursor.execute('''
+                CREATE TABLE IF NOT EXISTS students (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    student_id VARCHAR(20) UNIQUE NOT NULL,
+                    name VARCHAR(50) NOT NULL,
+                    gender VARCHAR(10),
+                    birth DATE,
+                    class VARCHAR(50),
+                    major VARCHAR(50),
+                    user_id INT UNIQUE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # 创建教师表
+            temp_cursor.execute('''
+                CREATE TABLE IF NOT EXISTS teachers (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    teacher_id VARCHAR(20) UNIQUE NOT NULL,
+                    name VARCHAR(50) NOT NULL,
+                    gender VARCHAR(10),
+                    title VARCHAR(50),
+                    department VARCHAR(50),
+                    user_id INT UNIQUE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # 创建课程表
+            temp_cursor.execute('''
+                CREATE TABLE IF NOT EXISTS courses (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    course_code VARCHAR(20) UNIQUE NOT NULL,
+                    course_name VARCHAR(100) NOT NULL,
+                    credits FLOAT NOT NULL,
+                    teacher_id INT,
+                    semester VARCHAR(20),
+                    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+                )
+            ''')
+            
+            # 创建成绩表
+            temp_cursor.execute('''
+                CREATE TABLE IF NOT EXISTS scores (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    student_id INT NOT NULL,
+                    course_id INT NOT NULL,
+                    score FLOAT NOT NULL,
+                    semester VARCHAR(20),
+                    exam_time DATE,
+                    UNIQUE KEY unique_score (student_id, course_id, semester),
+                    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # 插入管理员用户
+            temp_cursor.execute('''
+                INSERT IGNORE INTO users (username, password, role, name) 
+                VALUES ('admin', 'admin123', 'admin', '系统管理员')
+            ''')
+            
+            temp_conn.commit()
+            temp_cursor.close()
+            temp_conn.close()
+            
+            # 重新连接到新创建的数据库
+            self.connect()
+            logger.info("数据库和表结构创建成功")
+        except Exception as e:
+            logger.error(f"创建数据库失败: {e}")
+    
+    def execute_query(self, query, params=None):
+        """执行查询语句"""
+        try:
+            if not self.connection or not self.connection.open:
+                self.connect()
+            self.cursor.execute(query, params)
+            return self.cursor.fetchall()
+        except Exception as e:
+            logger.error(f"查询执行失败: {e}")
+            return None
+    
+    def execute_update(self, query, params=None):
+        """执行更新语句(插入、更新、删除)"""
+        try:
+            if not self.connection or not self.connection.open:
+                self.connect()
+            result = self.cursor.execute(query, params)
+            self.connection.commit()
+            return result
+        except Exception as e:
+            logger.error(f"更新执行失败: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return 0
+    
+    def close(self):
+        """关闭数据库连接"""
+        try:
+            if self.cursor:
+                self.cursor.close()
+            if self.connection and self.connection.open:
+                self.connection.close()
+            logger.info("数据库连接已关闭")
+        except Exception as e:
+            logger.error(f"关闭数据库连接失败: {e}")
+
+
+# 创建全局数据库管理器实例
+db_manager = DatabaseManager()
