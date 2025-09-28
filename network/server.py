@@ -156,9 +156,11 @@ class Server:
             # 自定义JSON编码器处理datetime对象
             class DateTimeEncoder(json.JSONEncoder):
                 def default(self, obj):
-                    from datetime import datetime
+                    from datetime import datetime, date
                     if isinstance(obj, datetime):
                         return obj.strftime('%Y-%m-%d %H:%M:%S')
+                    if isinstance(obj, date):
+                        return obj.strftime('%Y-%m-%d')
                     return super(DateTimeEncoder, self).default(obj)
             
             # 序列化数据，使用自定义编码器
@@ -196,6 +198,11 @@ class Server:
             password = params.get('password')
             role = params.get('role')
             name = params.get('name') or username
+            
+            # 服务端基础校验：密码长度
+            if password is None or len(password) < 6:
+                return {'success': False, 'message': '密码长度不得小于6位'}
+            
             success = User.register(username, password, role, name)
             return {'success': success, 'message': '注册成功' if success else '注册失败或用户名已存在'}
         
@@ -233,6 +240,112 @@ class Server:
             # 调用User模型的update_user方法
             success = User.update_user(user_id, name=name, password=password, role=role, email=email)
             return {'success': success, 'message': '更新成功' if success else '更新失败'}
+        
+        # 新增：搜索用户（管理员权限）
+        elif action == 'search_users' and current_user['role'] == 'admin':
+            keyword = params.get('keyword', '')
+            users = User.search_users(keyword)
+            return {'success': True, 'users': users}
+        
+        # 新增：个人密码修改（登录用户）
+        elif action == 'change_password':
+            new_password = params.get('password')
+            if new_password is None or len(new_password) < 6:
+                return {'success': False, 'message': '密码长度不得小于6位'}
+            success = User.update_user(current_user['id'], password=new_password)
+            return {'success': success, 'message': '修改成功' if success else '修改失败'}
+        
+        # 新增：学生管理（管理员权限）
+        elif action == 'get_all_students' and current_user['role'] == 'admin':
+            students = Student.get_all_students()
+            return {'success': True, 'students': students}
+        
+        elif action == 'search_students' and current_user['role'] == 'admin':
+            keyword = params.get('keyword', '')
+            students = Student.search_students(keyword)
+            return {'success': True, 'students': students}
+        
+        elif action == 'get_student_by_id' and current_user['role'] == 'admin':
+            student_id = params.get('student_id')
+            student = Student.get_student_by_id(student_id)
+            if student:
+                return {'success': True, 'student': student}
+            return {'success': False, 'message': '未找到学生'}
+        
+        elif action == 'add_student' and current_user['role'] == 'admin':
+            student_id = params.get('student_id')
+            name = params.get('name')
+            gender = params.get('gender')
+            birth = params.get('birth')
+            class_name = params.get('class') or params.get('class_name')
+            major = params.get('major')
+            # 管理员添加可不绑定用户
+            success = Student.add_student(student_id, name, gender, birth, class_name, major, None)
+            return {'success': success, 'message': '添加成功' if success else '添加失败'}
+        
+        elif action == 'update_student' and current_user['role'] == 'admin':
+            student_id = params.get('student_id')
+            name = params.get('name')
+            gender = params.get('gender')
+            birth = params.get('birth')
+            class_name = params.get('class') or params.get('class_name')
+            major = params.get('major')
+            success = Student.update_student(student_id, name=name, gender=gender, birth=birth, class_name=class_name, major=major)
+            return {'success': success, 'message': '更新成功' if success else '更新失败'}
+        
+        elif action == 'delete_student' and current_user['role'] == 'admin':
+            student_id = params.get('student_id')
+            # 若学生绑定了用户，则删除用户以级联清理学生信息
+            try:
+                student = Student.get_student_by_id(student_id)
+                if student and student.get('user_id'):
+                    user_id = student.get('user_id')
+                    success = User.delete_user(user_id)
+                else:
+                    success = Student.delete_student(student_id)
+            except Exception:
+                success = False
+            return {'success': success, 'message': '删除成功' if success else '删除失败'}
+        
+        # 新增：教师管理（管理员权限）
+        elif action == 'get_all_teachers' and current_user['role'] == 'admin':
+            teachers = Teacher.get_all_teachers()
+            return {'success': True, 'teachers': teachers}
+        
+        elif action == 'search_teachers' and current_user['role'] == 'admin':
+            keyword = params.get('keyword', '')
+            teachers = Teacher.search_teachers(keyword)
+            return {'success': True, 'teachers': teachers}
+        
+        elif action == 'get_teacher_by_id' and current_user['role'] == 'admin':
+            teacher_id = params.get('teacher_id')
+            teacher = Teacher.get_teacher_by_id(teacher_id)
+            if teacher:
+                return {'success': True, 'teacher': teacher}
+            return {'success': False, 'message': '未找到教师'}
+        
+        elif action == 'add_teacher' and current_user['role'] == 'admin':
+            teacher_id = params.get('teacher_id')
+            name = params.get('name')
+            gender = params.get('gender')
+            title = params.get('title')
+            department = params.get('department')
+            success = Teacher.add_teacher(teacher_id, name, gender, title, department, None)
+            return {'success': success, 'message': '添加成功' if success else '添加失败'}
+        
+        elif action == 'update_teacher' and current_user['role'] == 'admin':
+            teacher_id = params.get('teacher_id')
+            name = params.get('name')
+            gender = params.get('gender')
+            title = params.get('title')
+            department = params.get('department')
+            success = Teacher.update_teacher(teacher_id, name=name, gender=gender, title=title, department=department)
+            return {'success': success, 'message': '更新成功' if success else '更新失败'}
+        
+        elif action == 'delete_teacher' and current_user['role'] == 'admin':
+            teacher_id = params.get('teacher_id')
+            success = Teacher.delete_teacher(teacher_id)
+            return {'success': success, 'message': '删除成功' if success else '删除失败'}
         
         # 学生管理操作
         elif action == 'get_student_info' and current_user['role'] in ['admin', 'student']:

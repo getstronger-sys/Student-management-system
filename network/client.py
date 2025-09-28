@@ -171,6 +171,47 @@ class Client:
         """获取所有用户信息（管理员）"""
         return self.send_request('get_all_users')
     
+    # 新增：快捷方法：搜索用户（管理员）
+    def search_users(self, keyword: str):
+        """根据关键词搜索用户（管理员）"""
+        return self.send_request('search_users', {'keyword': keyword})
+    
+    # 学生管理（管理员）
+    def get_all_students_admin(self):
+        return self.send_request('get_all_students')
+    
+    def search_students_admin(self, keyword: str):
+        return self.send_request('search_students', {'keyword': keyword})
+    
+    def add_student_admin(self, student):
+        return self.send_request('add_student', student)
+    
+    def update_student_admin(self, student):
+        return self.send_request('update_student', student)
+    
+    def delete_student_admin(self, student_id):
+        return self.send_request('delete_student', {'student_id': student_id})
+    
+    # 教师管理（管理员）
+    def get_all_teachers_admin(self):
+        return self.send_request('get_all_teachers')
+    
+    def search_teachers_admin(self, keyword: str):
+        return self.send_request('search_teachers', {'keyword': keyword})
+    
+    def add_teacher_admin(self, teacher):
+        return self.send_request('add_teacher', teacher)
+    
+    def update_teacher_admin(self, teacher):
+        return self.send_request('update_teacher', teacher)
+    
+    def delete_teacher_admin(self, teacher_id):
+        return self.send_request('delete_teacher', {'teacher_id': teacher_id})
+    
+    # 个人密码修改（登录用户）
+    def change_password(self, new_password: str):
+        return self.send_request('change_password', {'password': new_password})
+    
     # 快捷方法：删除用户（管理员）
     def delete_user(self, user_id):
         """删除用户（管理员）"""

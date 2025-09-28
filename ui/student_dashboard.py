@@ -21,6 +21,11 @@ from network.client import client
 from models.student import Student
 from models.scores import Score
 import utils.data_visualization
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
+    QTableWidgetItem, QTabWidget, QFrame, QMessageBox,
+    QPushButton, QLineEdit, QFormLayout, QDialog, QDialogButtonBox, QComboBox, QDateEdit
+)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -76,6 +81,7 @@ class StudentDashboard(QWidget):
         # 保存用户信息
         self.user_info = user_info
         self.student_id = None
+        self.current_student_info = None
         
         # 初始化UI
         self.init_ui()
@@ -144,16 +150,37 @@ class StudentDashboard(QWidget):
     def update_student_info(self, student):
         """更新学生信息显示"""
         if student:
+            self.current_student_info = student
             self.student_id = student.get('student_id')
             
-            # 更新界面显示
+            # 计算年龄（根据 birth 字段）
+            age_text = ''
+            try:
+                birth_val = student.get('birth')
+                if birth_val:
+                    from datetime import datetime, date
+                    if isinstance(birth_val, str):
+                        birth_date = datetime.strptime(birth_val, '%Y-%m-%d').date()
+                    elif isinstance(birth_val, date):
+                        birth_date = birth_val
+                    else:
+                        birth_date = None
+                    if birth_date:
+                        today = date.today()
+                        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                        age_text = str(age)
+            except Exception:
+                age_text = ''
+            
+            # 更新界面显示（按后端实际字段映射）
             self.student_id_label.setText(f"学生ID: {student.get('student_id', '')}")
             self.name_label.setText(f"姓名: {student.get('name', '')}")
             self.gender_label.setText(f"性别: {student.get('gender', '')}")
-            self.age_label.setText(f"年龄: {student.get('age', '')}")
+            self.age_label.setText(f"年龄: {age_text}")
             self.major_label.setText(f"专业: {student.get('major', '')}")
-            self.class_label.setText(f"班级: {student.get('class_name', '')}")
-            self.admission_year_label.setText(f"入学年份: {student.get('admission_year', '')}")
+            self.class_label.setText(f"班级: {student.get('class', '')}")
+            # 系统未提供入学年份字段，这里留空
+            self.admission_year_label.setText(f"入学年份: ")
     
     def update_scores(self, scores, gpa):
         """更新成绩显示"""
@@ -242,6 +269,19 @@ class StudentDashboard(QWidget):
         # 入学年份
         self.admission_year_label = QLabel("入学年份: ")
         profile_form_layout.addWidget(self.admission_year_label)
+        
+        # 操作按钮区：修改信息
+        buttons_layout = QHBoxLayout()
+        self.edit_info_button = QPushButton("修改信息")
+        self.edit_info_button.clicked.connect(self.open_edit_dialog)
+        buttons_layout.addWidget(self.edit_info_button)
+        
+        self.change_pwd_button = QPushButton("修改密码")
+        self.change_pwd_button.clicked.connect(self.open_change_password_dialog)
+        buttons_layout.addWidget(self.change_pwd_button)
+        
+        buttons_layout.addStretch()
+        profile_form_layout.addLayout(buttons_layout)
         
         # 添加个人信息组框到布局
         profile_layout.addWidget(profile_group)
@@ -365,6 +405,20 @@ class StudentDashboard(QWidget):
         # 重新加载数据
         self.start_data_loading()
 
+    def open_edit_dialog(self):
+        """打开修改个人信息对话框"""
+        if not self.current_student_info:
+            QMessageBox.warning(self, "提示", "未获取到个人信息，稍后再试")
+            return
+        dialog = EditSelfStudentDialog(self.current_student_info, self)
+        if dialog.exec_() == QDialog.Accepted:
+            # 更新成功后刷新数据显示
+            self.start_data_loading()
+    
+    def open_change_password_dialog(self):
+        dialog = ChangePasswordDialog(self)
+        dialog.exec_()
+
 
 class ScoreDistributionCanvas(FigureCanvas):
     """成绩分布图表画布"""
@@ -472,6 +526,127 @@ class SemesterComparisonCanvas(FigureCanvas):
         
         # 刷新画布
         self.draw()
+
+
+class EditSelfStudentDialog(QDialog):
+    """学生自助修改个人信息对话框"""
+    def __init__(self, student_info: dict, parent=None):
+        super().__init__(parent)
+        self.student_info = student_info or {}
+        self.setWindowTitle("修改个人信息")
+        self.setMinimumWidth(420)
+        self.init_ui()
+        self.fill_form()
+    
+    def init_ui(self):
+        self.form = QFormLayout(self)
+        # 学号只读
+        self.student_id_label = QLabel()
+        self.form.addRow("学号:", self.student_id_label)
+        # 姓名
+        self.name_edit = QLineEdit()
+        self.form.addRow("姓名:", self.name_edit)
+        # 性别
+        self.gender_combo = QComboBox()
+        self.gender_combo.addItems(["", "男", "女"])
+        self.form.addRow("性别:", self.gender_combo)
+        # 出生日期
+        self.birth_edit = QDateEdit()
+        self.birth_edit.setCalendarPopup(True)
+        self.form.addRow("出生日期:", self.birth_edit)
+        # 班级
+        self.class_edit = QLineEdit()
+        self.form.addRow("班级:", self.class_edit)
+        # 专业
+        self.major_edit = QLineEdit()
+        self.form.addRow("专业:", self.major_edit)
+        # 按钮
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.on_submit)
+        btns.rejected.connect(self.reject)
+        self.form.addRow(btns)
+    
+    def fill_form(self):
+        from PyQt5.QtCore import QDate
+        self.student_id_label.setText(self.student_info.get('student_id', ''))
+        self.name_edit.setText(self.student_info.get('name', ''))
+        self.gender_combo.setCurrentText(self.student_info.get('gender', ''))
+        birth = self.student_info.get('birth')
+        if birth:
+            try:
+                parts = str(birth).split('-')
+                if len(parts) == 3:
+                    self.birth_edit.setDate(QDate(int(parts[0]), int(parts[1]), int(parts[2])))
+            except Exception:
+                pass
+        self.class_edit.setText(self.student_info.get('class', ''))
+        self.major_edit.setText(self.student_info.get('major', ''))
+    
+    def on_submit(self):
+        name = self.name_edit.text().strip()
+        gender = self.gender_combo.currentText()
+        class_name = self.class_edit.text().strip()
+        major = self.major_edit.text().strip()
+        birth_str = self.birth_edit.date().toString('yyyy-MM-dd') if self.birth_edit.date().isValid() else None
+        if not name:
+            QMessageBox.warning(self, "输入错误", "姓名不能为空")
+            return
+        try:
+            payload = {
+                'name': name,
+                'gender': gender,
+                'birth': birth_str,
+                'class_name': class_name,
+                'major': major
+            }
+            resp = client.update_student_info(**payload)
+            if resp.get('success'):
+                QMessageBox.information(self, "更新成功", "个人信息已更新")
+                self.accept()
+            else:
+                QMessageBox.warning(self, "更新失败", resp.get('message', '更新失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"更新失败: {str(e)}")
+
+
+class ChangePasswordDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("修改密码")
+        self.setMinimumWidth(380)
+        self.init_ui()
+    
+    def init_ui(self):
+        self.form = QFormLayout(self)
+        self.pwd_edit = QLineEdit()
+        self.pwd_edit.setEchoMode(QLineEdit.Password)
+        self.form.addRow("新密码:", self.pwd_edit)
+        self.pwd_confirm_edit = QLineEdit()
+        self.pwd_confirm_edit.setEchoMode(QLineEdit.Password)
+        self.form.addRow("确认密码:", self.pwd_confirm_edit)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.on_submit)
+        btns.rejected.connect(self.reject)
+        self.form.addRow(btns)
+    
+    def on_submit(self):
+        pwd = self.pwd_edit.text().strip()
+        confirm = self.pwd_confirm_edit.text().strip()
+        if len(pwd) < 6:
+            QMessageBox.warning(self, "输入错误", "密码长度不得小于6位")
+            return
+        if pwd != confirm:
+            QMessageBox.warning(self, "输入错误", "两次输入的密码不一致")
+            return
+        try:
+            resp = client.change_password(pwd)
+            if resp.get('success'):
+                QMessageBox.information(self, "修改成功", "密码已更新，请牢记新密码")
+                self.accept()
+            else:
+                QMessageBox.warning(self, "修改失败", resp.get('message', '修改失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"修改失败: {str(e)}")
 
 
 # 测试代码

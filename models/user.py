@@ -47,6 +47,11 @@ class User:
     def register(username, password, role, name):
         """用户注册"""
         try:
+            # 基础校验：密码长度
+            if password is None or len(password) < 6:
+                logger.warning("用户注册失败: 密码长度不足6位")
+                return False
+            
             # 检查用户名是否已存在
             query = "SELECT * FROM users WHERE username = %s"
             result = db_manager.execute_query(query, (username,))
@@ -159,6 +164,18 @@ class User:
         except Exception as e:
             logger.error(f"获取所有用户信息失败: {e}")
             return None
+    
+    @staticmethod
+    def search_users(keyword: str):
+        """根据关键词搜索用户（用户名或姓名模糊匹配）"""
+        try:
+            like_kw = f"%{keyword}%"
+            query = "SELECT * FROM users WHERE username LIKE %s OR name LIKE %s"
+            result = db_manager.execute_query(query, (like_kw, like_kw))
+            return result or []
+        except Exception as e:
+            logger.error(f"搜索用户失败: {e}")
+            return []
     
     @staticmethod
     def delete_user(user_id):

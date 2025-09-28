@@ -47,6 +47,9 @@ class AdminDashboard(QWidget):
         
         # 加载数据
         self.load_users()
+        # 新增：进入页面即加载学生与教师列表
+        self.load_students()
+        self.load_teachers()
     
     def init_ui(self):
         """初始化用户界面"""
@@ -141,7 +144,7 @@ class AdminDashboard(QWidget):
         
         # 搜索框
         self.users_search_edit = QLineEdit()
-        self.users_search_edit.setPlaceholderText("搜索用户名")
+        self.users_search_edit.setPlaceholderText("搜索用户名或姓名")
         self.users_search_edit.returnPressed.connect(self.search_users)
         actions_layout.addWidget(self.users_search_edit)
         
@@ -179,15 +182,18 @@ class AdminDashboard(QWidget):
         
         # 刷新按钮
         self.refresh_students_button = QPushButton("刷新")
+        self.refresh_students_button.clicked.connect(self.load_students)
         actions_layout.addWidget(self.refresh_students_button)
         
         # 搜索框
         self.students_search_edit = QLineEdit()
         self.students_search_edit.setPlaceholderText("搜索学生姓名或学号")
+        self.students_search_edit.returnPressed.connect(self.search_students)
         actions_layout.addWidget(self.students_search_edit)
         
         # 搜索按钮
         self.search_students_button = QPushButton("搜索")
+        self.search_students_button.clicked.connect(self.search_students)
         actions_layout.addWidget(self.search_students_button)
         
         # 添加操作按钮布局到主布局
@@ -196,7 +202,7 @@ class AdminDashboard(QWidget):
         # 创建学生表格
         self.students_table = QTableWidget()
         self.students_table.setColumnCount(8)
-        self.students_table.setHorizontalHeaderLabels(["学生ID", "学号", "姓名", "性别", "年龄", "专业", "班级", "操作"])
+        self.students_table.setHorizontalHeaderLabels(["学生ID", "学号", "姓名", "性别", "出生日期", "专业", "班级", "操作"])
         
         # 设置表格样式
         self.students_table.horizontalHeader().setStretchLastSection(True)
@@ -219,15 +225,18 @@ class AdminDashboard(QWidget):
         
         # 刷新按钮
         self.refresh_teachers_button = QPushButton("刷新")
+        self.refresh_teachers_button.clicked.connect(self.load_teachers)
         actions_layout.addWidget(self.refresh_teachers_button)
         
         # 搜索框
         self.teachers_search_edit = QLineEdit()
         self.teachers_search_edit.setPlaceholderText("搜索教师姓名")
+        self.teachers_search_edit.returnPressed.connect(self.search_teachers)
         actions_layout.addWidget(self.teachers_search_edit)
         
         # 搜索按钮
         self.search_teachers_button = QPushButton("搜索")
+        self.search_teachers_button.clicked.connect(self.search_teachers)
         actions_layout.addWidget(self.search_teachers_button)
         
         # 添加操作按钮布局到主布局
@@ -236,7 +245,7 @@ class AdminDashboard(QWidget):
         # 创建教师表格
         self.teachers_table = QTableWidget()
         self.teachers_table.setColumnCount(7)
-        self.teachers_table.setHorizontalHeaderLabels(["教师ID", "姓名", "性别", "年龄", "部门", "职称", "操作"])
+        self.teachers_table.setHorizontalHeaderLabels(["教师ID", "姓名", "性别", "教师编号", "部门", "职称", "操作"])
         
         # 设置表格样式
         self.teachers_table.horizontalHeader().setStretchLastSection(True)
@@ -434,21 +443,239 @@ class AdminDashboard(QWidget):
     
     def search_users(self):
         """搜索用户"""
-        # 这里简化处理，实际可能需要调用特定的API搜索用户
         keyword = self.users_search_edit.text().strip()
         if not keyword:
             self.load_users()
             return
-        
-        QMessageBox.information(self, "功能提示", f"用户搜索功能待实现，关键词: {keyword}")
+        try:
+            response = client.search_users(keyword)
+            if response.get('success'):
+                users = response.get('users', [])
+                # 清空表格
+                self.users_table.setRowCount(0)
+                # 填充表格（复用 load_users 的渲染规则）
+                for user in users:
+                    row_position = self.users_table.rowCount()
+                    self.users_table.insertRow(row_position)
+                    self.users_table.setItem(row_position, 0, QTableWidgetItem(str(user.get('id', ''))))
+                    self.users_table.setItem(row_position, 1, QTableWidgetItem(user.get('username', '')))
+                    self.users_table.setItem(row_position, 2, QTableWidgetItem(user.get('name', '')))
+                    role_text = '管理员' if user.get('role') == 'admin' else '教师' if user.get('role') == 'teacher' else '学生'
+                    self.users_table.setItem(row_position, 3, QTableWidgetItem(role_text))
+                    self.users_table.setItem(row_position, 4, QTableWidgetItem(user.get('email', '')))
+                    action_widget = QWidget()
+                    action_layout = QHBoxLayout(action_widget)
+                    action_layout.setContentsMargins(0, 0, 0, 0)
+                    edit_button = QPushButton("编辑")
+                    edit_button.setMaximumWidth(60)
+                    edit_button.clicked.connect(lambda checked, user_id=user.get('id'): self.edit_user(user_id))
+                    action_layout.addWidget(edit_button)
+                    delete_button = QPushButton("删除")
+                    delete_button.setMaximumWidth(60)
+                    delete_button.setStyleSheet("color: red;")
+                    delete_button.clicked.connect(lambda checked, user_id=user.get('id'): self.delete_user(user_id))
+                    action_layout.addWidget(delete_button)
+                    self.users_table.setCellWidget(row_position, 5, action_widget)
+                self.users_table.resizeColumnsToContents()
+            else:
+                QMessageBox.warning(self, "搜索失败", response.get('message', '搜索用户失败'))
+        except Exception as e:
+            logger.error(f"搜索用户失败: {e}")
+            QMessageBox.critical(self, "错误", f"搜索用户失败: {str(e)}")
+    
+    def load_students(self):
+        """加载学生数据"""
+        try:
+            response = client.get_all_students_admin()
+            if response.get('success'):
+                students = response.get('students', [])
+                self.students_table.setRowCount(0)
+                for s in students:
+                    row = self.students_table.rowCount()
+                    self.students_table.insertRow(row)
+                    self.students_table.setItem(row, 0, QTableWidgetItem(str(s.get('id', ''))))
+                    self.students_table.setItem(row, 1, QTableWidgetItem(s.get('student_id', '')))
+                    self.students_table.setItem(row, 2, QTableWidgetItem(s.get('name', '')))
+                    self.students_table.setItem(row, 3, QTableWidgetItem(s.get('gender', '')))
+                    self.students_table.setItem(row, 4, QTableWidgetItem(str(s.get('birth', ''))))
+                    self.students_table.setItem(row, 5, QTableWidgetItem(s.get('major', '')))
+                    self.students_table.setItem(row, 6, QTableWidgetItem(s.get('class', '')))
+                    action_widget = QWidget()
+                    action_layout = QHBoxLayout(action_widget)
+                    action_layout.setContentsMargins(0, 0, 0, 0)
+                    edit_btn = QPushButton("编辑")
+                    edit_btn.setMaximumWidth(60)
+                    edit_btn.clicked.connect(lambda checked, sid=s.get('student_id'): self.edit_student(sid))
+                    action_layout.addWidget(edit_btn)
+                    del_btn = QPushButton("删除")
+                    del_btn.setMaximumWidth(60)
+                    del_btn.setStyleSheet("color: red;")
+                    del_btn.clicked.connect(lambda checked, sid=s.get('student_id'): self.delete_student(sid))
+                    action_layout.addWidget(del_btn)
+                    self.students_table.setCellWidget(row, 7, action_widget)
+                self.students_table.resizeColumnsToContents()
+        except Exception as e:
+            logger.error(f"加载学生数据失败: {e}")
+            QMessageBox.warning(self, "加载失败", f"加载学生数据失败: {str(e)}")
+    
+    def search_students(self):
+        """搜索学生"""
+        keyword = self.students_search_edit.text().strip()
+        if not keyword:
+            self.load_students()
+            return
+        try:
+            response = client.search_students_admin(keyword)
+            if response.get('success'):
+                students = response.get('students', [])
+                self.students_table.setRowCount(0)
+                for s in students:
+                    row = self.students_table.rowCount()
+                    self.students_table.insertRow(row)
+                    self.students_table.setItem(row, 0, QTableWidgetItem(str(s.get('id', ''))))
+                    self.students_table.setItem(row, 1, QTableWidgetItem(s.get('student_id', '')))
+                    self.students_table.setItem(row, 2, QTableWidgetItem(s.get('name', '')))
+                    self.students_table.setItem(row, 3, QTableWidgetItem(s.get('gender', '')))
+                    self.students_table.setItem(row, 4, QTableWidgetItem(str(s.get('birth', ''))))
+                    self.students_table.setItem(row, 5, QTableWidgetItem(s.get('major', '')))
+                    self.students_table.setItem(row, 6, QTableWidgetItem(s.get('class', '')))
+                    action_widget = QWidget()
+                    action_layout = QHBoxLayout(action_widget)
+                    action_layout.setContentsMargins(0, 0, 0, 0)
+                    edit_btn = QPushButton("编辑")
+                    edit_btn.setMaximumWidth(60)
+                    edit_btn.clicked.connect(lambda checked, sid=s.get('student_id'): self.edit_student(sid))
+                    action_layout.addWidget(edit_btn)
+                    del_btn = QPushButton("删除")
+                    del_btn.setMaximumWidth(60)
+                    del_btn.setStyleSheet("color: red;")
+                    del_btn.clicked.connect(lambda checked, sid=s.get('student_id'): self.delete_student(sid))
+                    action_layout.addWidget(del_btn)
+                    self.students_table.setCellWidget(row, 7, action_widget)
+                self.students_table.resizeColumnsToContents()
+        except Exception as e:
+            logger.error(f"搜索学生失败: {e}")
+            QMessageBox.critical(self, "错误", f"搜索学生失败: {str(e)}")
+    
+    def edit_student(self, student_id):
+        dialog = EditStudentDialog(student_id, self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_students()
+    
+    def delete_student(self, student_id):
+        reply = QMessageBox.question(self, "确认删除", f"确定要删除学号为 {student_id} 的学生吗？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
+                resp = client.delete_student_admin(student_id)
+                if resp.get('success'):
+                    QMessageBox.information(self, "删除成功", "学生删除成功")
+                    self.load_students()
+                else:
+                    QMessageBox.warning(self, "删除失败", resp.get('message', '删除失败'))
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"删除学生失败: {str(e)}")
+    
+    def load_teachers(self):
+        """加载教师数据"""
+        try:
+            response = client.get_all_teachers_admin()
+            if response.get('success'):
+                teachers = response.get('teachers', [])
+                self.teachers_table.setRowCount(0)
+                for t in teachers:
+                    row = self.teachers_table.rowCount()
+                    self.teachers_table.insertRow(row)
+                    self.teachers_table.setItem(row, 0, QTableWidgetItem(str(t.get('id', ''))))
+                    self.teachers_table.setItem(row, 1, QTableWidgetItem(t.get('name', '')))
+                    self.teachers_table.setItem(row, 2, QTableWidgetItem(t.get('gender', '')))
+                    self.teachers_table.setItem(row, 3, QTableWidgetItem(t.get('teacher_id', '')))
+                    self.teachers_table.setItem(row, 4, QTableWidgetItem(t.get('department', '')))
+                    self.teachers_table.setItem(row, 5, QTableWidgetItem(t.get('title', '')))
+                    action_widget = QWidget()
+                    action_layout = QHBoxLayout(action_widget)
+                    action_layout.setContentsMargins(0, 0, 0, 0)
+                    edit_btn = QPushButton("编辑")
+                    edit_btn.setMaximumWidth(60)
+                    edit_btn.clicked.connect(lambda checked, tid=t.get('teacher_id'): self.edit_teacher(tid))
+                    action_layout.addWidget(edit_btn)
+                    del_btn = QPushButton("删除")
+                    del_btn.setMaximumWidth(60)
+                    del_btn.setStyleSheet("color: red;")
+                    del_btn.clicked.connect(lambda checked, tid=t.get('teacher_id'): self.delete_teacher(tid))
+                    action_layout.addWidget(del_btn)
+                    self.teachers_table.setCellWidget(row, 6, action_widget)
+                self.teachers_table.resizeColumnsToContents()
+        except Exception as e:
+            logger.error(f"加载教师数据失败: {e}")
+            QMessageBox.warning(self, "加载失败", f"加载教师数据失败: {str(e)}")
+    
+    def search_teachers(self):
+        """搜索教师"""
+        keyword = self.teachers_search_edit.text().strip()
+        if not keyword:
+            self.load_teachers()
+            return
+        try:
+            response = client.search_teachers_admin(keyword)
+            if response.get('success'):
+                teachers = response.get('teachers', [])
+                self.teachers_table.setRowCount(0)
+                for t in teachers:
+                    row = self.teachers_table.rowCount()
+                    self.teachers_table.insertRow(row)
+                    self.teachers_table.setItem(row, 0, QTableWidgetItem(str(t.get('id', ''))))
+                    self.teachers_table.setItem(row, 1, QTableWidgetItem(t.get('name', '')))
+                    self.teachers_table.setItem(row, 2, QTableWidgetItem(t.get('gender', '')))
+                    self.teachers_table.setItem(row, 3, QTableWidgetItem(t.get('teacher_id', '')))
+                    self.teachers_table.setItem(row, 4, QTableWidgetItem(t.get('department', '')))
+                    self.teachers_table.setItem(row, 5, QTableWidgetItem(t.get('title', '')))
+                    action_widget = QWidget()
+                    action_layout = QHBoxLayout(action_widget)
+                    action_layout.setContentsMargins(0, 0, 0, 0)
+                    edit_btn = QPushButton("编辑")
+                    edit_btn.setMaximumWidth(60)
+                    edit_btn.clicked.connect(lambda checked, tid=t.get('teacher_id'): self.edit_teacher(tid))
+                    action_layout.addWidget(edit_btn)
+                    del_btn = QPushButton("删除")
+                    del_btn.setMaximumWidth(60)
+                    del_btn.setStyleSheet("color: red;")
+                    del_btn.clicked.connect(lambda checked, tid=t.get('teacher_id'): self.delete_teacher(tid))
+                    action_layout.addWidget(del_btn)
+                    self.teachers_table.setCellWidget(row, 6, action_widget)
+                self.teachers_table.resizeColumnsToContents()
+        except Exception as e:
+            logger.error(f"搜索教师失败: {e}")
+            QMessageBox.critical(self, "错误", f"搜索教师失败: {str(e)}")
+    
+    def edit_teacher(self, teacher_id):
+        dialog = EditTeacherDialog(teacher_id, self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_teachers()
+    
+    def delete_teacher(self, teacher_id):
+        reply = QMessageBox.question(self, "确认删除", f"确定要删除教师编号为 {teacher_id} 的教师吗？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
+                resp = client.delete_teacher_admin(teacher_id)
+                if resp.get('success'):
+                    QMessageBox.information(self, "删除成功", "教师删除成功")
+                    self.load_teachers()
+                else:
+                    QMessageBox.warning(self, "删除失败", resp.get('message', '删除失败'))
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"删除教师失败: {str(e)}")
     
     def add_student(self):
         """添加学生"""
-        QMessageBox.information(self, "功能提示", "添加学生功能待实现")
+        dialog = AddStudentDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_students()
     
     def add_teacher(self):
         """添加教师"""
-        QMessageBox.information(self, "功能提示", "添加教师功能待实现")
+        dialog = AddTeacherDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_teachers()
     
     def add_course(self):
         """添加课程"""
@@ -753,19 +980,274 @@ class AddUserDialog(QDialog):
             return
         
         try:
-            # 调用User模型的添加方法
-            success = User.register(username, password, name, role, email)
+            # 先注册（服务端 register: username/password/role/name）
+            resp = client.register(username, password, role, name)
+            if not resp.get('success'):
+                QMessageBox.warning(self, "添加失败", resp.get('message', '用户添加失败，请重试'))
+                return
             
-            if success:
+            # 如填写了邮箱，则补充更新邮箱
+            if email:
+                # 通过搜索获取新建用户ID
+                search_resp = client.search_users(username)
+                user_list = search_resp.get('success') and search_resp.get('users', []) or []
+                target = None
+                for u in user_list:
+                    if u.get('username') == username:
+                        target = u
+                        break
+                if target and target.get('id'):
+                    client.update_user(target.get('id'), email=email)
+            
                 # 添加成功
                 QMessageBox.information(self, "添加成功", "用户添加成功")
                 super().accept()
-            else:
-                # 添加失败
-                QMessageBox.warning(self, "添加失败", "用户添加失败，请重试")
         except Exception as e:
             # 处理异常
             QMessageBox.critical(self, "添加错误", f"添加用户时发生错误: {str(e)}")
+
+
+class EditStudentDialog(QDialog):
+    def __init__(self, student_id, parent=None):
+        super().__init__(parent)
+        self.student_id = student_id
+        self.setWindowTitle("编辑学生")
+        self.setMinimumWidth(400)
+        self.init_ui()
+        self.load_data()
+    
+    def init_ui(self):
+        layout = QFormLayout(self)
+        self.student_id_label = QLabel(self.student_id)
+        layout.addRow("学号:", self.student_id_label)
+        self.name_edit = QLineEdit()
+        layout.addRow("姓名:", self.name_edit)
+        self.gender_combo = QComboBox()
+        self.gender_combo.addItems(["", "男", "女"])
+        layout.addRow("性别:", self.gender_combo)
+        self.birth_edit = QDateEdit()
+        self.birth_edit.setCalendarPopup(True)
+        layout.addRow("出生日期:", self.birth_edit)
+        self.class_edit = QLineEdit()
+        layout.addRow("班级:", self.class_edit)
+        self.major_edit = QLineEdit()
+        layout.addRow("专业:", self.major_edit)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        layout.addRow(btns)
+    
+    def load_data(self):
+        try:
+            resp = client.send_request('get_student_by_id', {'student_id': self.student_id})
+            if resp.get('success'):
+                s = resp.get('student')
+                self.name_edit.setText(s.get('name', ''))
+                self.gender_combo.setCurrentText(s.get('gender', ''))
+                # 解析日期
+                from PyQt5.QtCore import QDate
+                birth = s.get('birth')
+                if birth:
+                    # birth 可能是 'YYYY-MM-DD'
+                    parts = str(birth).split('-')
+                    if len(parts) == 3:
+                        self.birth_edit.setDate(QDate(int(parts[0]), int(parts[1]), int(parts[2])))
+                self.class_edit.setText(s.get('class', ''))
+                self.major_edit.setText(s.get('major', ''))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"加载学生信息失败: {str(e)}")
+    
+    def accept(self):
+        # 收集数据
+        name = self.name_edit.text().strip()
+        gender = self.gender_combo.currentText()
+        class_name = self.class_edit.text().strip()
+        major = self.major_edit.text().strip()
+        birth_str = self.birth_edit.date().toString('yyyy-MM-dd') if self.birth_edit.date().isValid() else None
+        if not name:
+            QMessageBox.warning(self, "输入错误", "姓名不能为空")
+            return
+        try:
+            payload = {
+                'student_id': self.student_id,
+                'name': name,
+                'gender': gender,
+                'birth': birth_str,
+                'class': class_name,
+                'major': major
+            }
+            resp = client.update_student_admin(payload)
+            if resp.get('success'):
+                QMessageBox.information(self, "更新成功", "学生信息已更新")
+                super().accept()
+            else:
+                QMessageBox.warning(self, "更新失败", resp.get('message', '更新失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"更新学生失败: {str(e)}")
+
+class EditTeacherDialog(QDialog):
+    def __init__(self, teacher_id, parent=None):
+        super().__init__(parent)
+        self.teacher_id = teacher_id
+        self.setWindowTitle("编辑教师")
+        self.setMinimumWidth(400)
+        self.init_ui()
+        self.load_data()
+    
+    def init_ui(self):
+        layout = QFormLayout(self)
+        self.teacher_id_label = QLabel(self.teacher_id)
+        layout.addRow("教师编号:", self.teacher_id_label)
+        self.name_edit = QLineEdit()
+        layout.addRow("姓名:", self.name_edit)
+        self.gender_combo = QComboBox()
+        self.gender_combo.addItems(["", "男", "女"])
+        layout.addRow("性别:", self.gender_combo)
+        self.title_edit = QLineEdit()
+        layout.addRow("职称:", self.title_edit)
+        self.dept_edit = QLineEdit()
+        layout.addRow("部门:", self.dept_edit)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        layout.addRow(btns)
+    
+    def load_data(self):
+        try:
+            resp = client.send_request('get_teacher_by_id', {'teacher_id': self.teacher_id})
+            if resp.get('success'):
+                t = resp.get('teacher')
+                self.name_edit.setText(t.get('name', ''))
+                self.gender_combo.setCurrentText(t.get('gender', ''))
+                self.title_edit.setText(t.get('title', ''))
+                self.dept_edit.setText(t.get('department', ''))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"加载教师信息失败: {str(e)}")
+    
+    def accept(self):
+        name = self.name_edit.text().strip()
+        gender = self.gender_combo.currentText()
+        title = self.title_edit.text().strip()
+        department = self.dept_edit.text().strip()
+        if not name:
+            QMessageBox.warning(self, "输入错误", "姓名不能为空")
+            return
+        try:
+            payload = {
+                'teacher_id': self.teacher_id,
+                'name': name,
+                'gender': gender,
+                'title': title,
+                'department': department
+            }
+            resp = client.update_teacher_admin(payload)
+            if resp.get('success'):
+                QMessageBox.information(self, "更新成功", "教师信息已更新")
+                super().accept()
+            else:
+                QMessageBox.warning(self, "更新失败", resp.get('message', '更新失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"更新教师失败: {str(e)}")
+
+class AddStudentDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("添加学生")
+        self.setMinimumWidth(400)
+        self.init_ui()
+    
+    def init_ui(self):
+        layout = QFormLayout(self)
+        self.student_id_edit = QLineEdit()
+        layout.addRow("学号:", self.student_id_edit)
+        self.name_edit = QLineEdit()
+        layout.addRow("姓名:", self.name_edit)
+        self.gender_combo = QComboBox()
+        self.gender_combo.addItems(["", "男", "女"])
+        layout.addRow("性别:", self.gender_combo)
+        self.birth_edit = QDateEdit()
+        self.birth_edit.setCalendarPopup(True)
+        layout.addRow("出生日期:", self.birth_edit)
+        self.class_edit = QLineEdit()
+        layout.addRow("班级:", self.class_edit)
+        self.major_edit = QLineEdit()
+        layout.addRow("专业:", self.major_edit)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        layout.addRow(btns)
+    
+    def accept(self):
+        sid = self.student_id_edit.text().strip()
+        name = self.name_edit.text().strip()
+        if not sid or not name:
+            QMessageBox.warning(self, "输入错误", "学号与姓名不能为空")
+            return
+        try:
+            payload = {
+                'student_id': sid,
+                'name': name,
+                'gender': self.gender_combo.currentText(),
+                'birth': self.birth_edit.date().toString('yyyy-MM-dd') if self.birth_edit.date().isValid() else None,
+                'class': self.class_edit.text().strip(),
+                'major': self.major_edit.text().strip()
+            }
+            resp = client.add_student_admin(payload)
+            if resp.get('success'):
+                QMessageBox.information(self, "添加成功", "学生已添加")
+                super().accept()
+            else:
+                QMessageBox.warning(self, "添加失败", resp.get('message', '添加失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"添加学生失败: {str(e)}")
+
+class AddTeacherDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("添加教师")
+        self.setMinimumWidth(400)
+        self.init_ui()
+    
+    def init_ui(self):
+        layout = QFormLayout(self)
+        self.teacher_id_edit = QLineEdit()
+        layout.addRow("教师编号:", self.teacher_id_edit)
+        self.name_edit = QLineEdit()
+        layout.addRow("姓名:", self.name_edit)
+        self.gender_combo = QComboBox()
+        self.gender_combo.addItems(["", "男", "女"])
+        layout.addRow("性别:", self.gender_combo)
+        self.title_edit = QLineEdit()
+        layout.addRow("职称:", self.title_edit)
+        self.dept_edit = QLineEdit()
+        layout.addRow("部门:", self.dept_edit)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        layout.addRow(btns)
+    
+    def accept(self):
+        tid = self.teacher_id_edit.text().strip()
+        name = self.name_edit.text().strip()
+        if not tid or not name:
+            QMessageBox.warning(self, "输入错误", "教师编号与姓名不能为空")
+            return
+        try:
+            payload = {
+                'teacher_id': tid,
+                'name': name,
+                'gender': self.gender_combo.currentText(),
+                'title': self.title_edit.text().strip(),
+                'department': self.dept_edit.text().strip()
+            }
+            resp = client.add_teacher_admin(payload)
+            if resp.get('success'):
+                QMessageBox.information(self, "添加成功", "教师已添加")
+                super().accept()
+            else:
+                QMessageBox.warning(self, "添加失败", resp.get('message', '添加失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"添加教师失败: {str(e)}")
 
 
 # 测试代码

@@ -164,7 +164,11 @@ def init_database():
         # 插入教师用户
         teachers = [
             ('teacher1', hash_password('teacher123'), 'teacher', '张教授'),
-            ('teacher2', hash_password('teacher123'), 'teacher', '李讲师')
+            ('teacher2', hash_password('teacher123'), 'teacher', '李讲师'),
+            ('teacher3', hash_password('teacher123'), 'teacher', '王副教授'),
+            ('teacher4', hash_password('teacher123'), 'teacher', '刘教授'),
+            ('teacher5', hash_password('teacher123'), 'teacher', '陈高工'),
+            ('teacher6', hash_password('teacher123'), 'teacher', '林教授')
         ]
         for teacher in teachers:
             cursor.execute(
@@ -185,11 +189,42 @@ def init_database():
         ''')
         teacher2_id = cursor.lastrowid
         
+        cursor.execute('''
+            INSERT INTO teachers (teacher_id, name, gender, title, department, user_id) 
+            VALUES ('T003', '王副教授', '男', '副教授', '数学学院', (SELECT id FROM users WHERE username='teacher3'))
+        ''')
+        teacher3_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO teachers (teacher_id, name, gender, title, department, user_id) 
+            VALUES ('T004', '刘教授', '男', '教授', '物理学院', (SELECT id FROM users WHERE username='teacher4'))
+        ''')
+        teacher4_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO teachers (teacher_id, name, gender, title, department, user_id) 
+            VALUES ('T005', '陈高工', '女', '高级工程师', '计算机学院', (SELECT id FROM users WHERE username='teacher5'))
+        ''')
+        teacher5_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO teachers (teacher_id, name, gender, title, department, user_id) 
+            VALUES ('T006', '林教授', '女', '教授', '外语学院', (SELECT id FROM users WHERE username='teacher6'))
+        ''')
+        teacher6_id = cursor.lastrowid
+        
         # 插入学生用户
         students = [
             ('student1', hash_password('student123'), 'student', '王同学'),
             ('student2', hash_password('student123'), 'student', '陈同学'),
-            ('student3', hash_password('student123'), 'student', '赵同学')
+            ('student3', hash_password('student123'), 'student', '赵同学'),
+            ('student4', hash_password('student123'), 'student', '李同学'),
+            ('student5', hash_password('student123'), 'student', '张同学'),
+            ('student6', hash_password('student123'), 'student', '刘同学'),
+            ('student7', hash_password('student123'), 'student', '黄同学'),
+            ('student8', hash_password('student123'), 'student', '周同学'),
+            ('student9', hash_password('student123'), 'student', '吴同学'),
+            ('student10', hash_password('student123'), 'student', '郑同学')
         ]
         for student in students:
             cursor.execute(
@@ -216,11 +251,62 @@ def init_database():
         ''')
         student3_id = cursor.lastrowid
         
+        cursor.execute('''
+            INSERT INTO students (student_id, name, gender, birth, class, major, user_id) 
+            VALUES ('S004', '李同学', '女', '2003-05-20', '计科2102', '计算机科学与技术', (SELECT id FROM users WHERE username='student4'))
+        ''')
+        student4_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO students (student_id, name, gender, birth, class, major, user_id) 
+            VALUES ('S005', '张同学', '男', '2003-07-12', '软工2101', '软件工程', (SELECT id FROM users WHERE username='student5'))
+        ''')
+        student5_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO students (student_id, name, gender, birth, class, major, user_id) 
+            VALUES ('S006', '刘同学', '女', '2003-09-05', '软工2101', '软件工程', (SELECT id FROM users WHERE username='student6'))
+        ''')
+        student6_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO students (student_id, name, gender, birth, class, major, user_id) 
+            VALUES ('S007', '黄同学', '男', '2003-02-28', '软工2102', '软件工程', (SELECT id FROM users WHERE username='student7'))
+        ''')
+        student7_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO students (student_id, name, gender, birth, class, major, user_id) 
+            VALUES ('S008', '周同学', '女', '2002-12-10', '数学2101', '应用数学', (SELECT id FROM users WHERE username='student8'))
+        ''')
+        student8_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO students (student_id, name, gender, birth, class, major, user_id) 
+            VALUES ('S009', '吴同学', '男', '2003-04-18', '数学2101', '应用数学', (SELECT id FROM users WHERE username='student9'))
+        ''')
+        student9_id = cursor.lastrowid
+        
+        cursor.execute('''
+            INSERT INTO students (student_id, name, gender, birth, class, major, user_id) 
+            VALUES ('S010', '郑同学', '女', '2003-08-25', '物理2101', '应用物理', (SELECT id FROM users WHERE username='student10'))
+        ''')
+        student10_id = cursor.lastrowid
+        
         # 插入课程
         courses = [
             ('CS101', 'Python程序设计', 3.0, teacher1_id, '2025-2026-1'),
             ('CS102', '数据结构', 4.0, teacher1_id, '2025-2026-1'),
-            ('CS201', '计算机网络', 3.0, teacher2_id, '2025-2026-1')
+            ('CS201', '计算机网络', 3.0, teacher2_id, '2025-2026-1'),
+            ('CS202', '操作系统', 4.0, teacher3_id, '2025-2026-1'),
+            ('CS203', '数据库原理', 3.5, teacher2_id, '2025-2026-1'),
+            ('CS301', '软件工程', 3.0, teacher4_id, '2025-2026-2'),
+            ('CS302', '人工智能', 4.0, teacher5_id, '2025-2026-2'),
+            ('CS303', '编译原理', 4.0, teacher3_id, '2025-2026-2'),
+            ('MA101', '高等数学', 5.0, teacher3_id, '2025-2026-1'),
+            ('MA201', '线性代数', 3.0, teacher3_id, '2025-2026-2'),
+            ('PH101', '大学物理', 4.0, teacher4_id, '2025-2026-1'),
+            ('EN101', '大学英语', 3.0, teacher6_id, '2025-2026-1')
         ]
         for course in courses:
             cursor.execute(
@@ -238,20 +324,106 @@ def init_database():
         cursor.execute('SELECT id FROM courses WHERE course_code="CS201"')
         cs201_id = cursor.fetchone()['id']
         
+        cursor.execute('SELECT id FROM courses WHERE course_code="CS202"')
+        cs202_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="CS203"')
+        cs203_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="CS301"')
+        cs301_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="CS302"')
+        cs302_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="CS303"')
+        cs303_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="MA101"')
+        ma101_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="MA201"')
+        ma201_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="PH101"')
+        ph101_id = cursor.fetchone()['id']
+        
+        cursor.execute('SELECT id FROM courses WHERE course_code="EN101"')
+        en101_id = cursor.fetchone()['id']
+        
         # 插入成绩
         scores = [
-            # 王同学的成绩
+            # 第一学期成绩
+            # 计科2101班学生
             (student1_id, cs101_id, 85.5, '2025-2026-1', '2025-12-20'),
             (student1_id, cs102_id, 92.0, '2025-2026-1', '2025-12-22'),
-            (student1_id, cs201_id, 78.5, '2025-2026-1', '2025-12-25'),
-            # 陈同学的成绩
+            (student1_id, ma101_id, 78.5, '2025-2026-1', '2025-12-15'),
+            (student1_id, ph101_id, 82.0, '2025-2026-1', '2025-12-18'),
+            (student1_id, en101_id, 90.0, '2025-2026-1', '2025-12-25'),
+            
             (student2_id, cs101_id, 90.0, '2025-2026-1', '2025-12-20'),
             (student2_id, cs102_id, 88.5, '2025-2026-1', '2025-12-22'),
-            (student2_id, cs201_id, 94.0, '2025-2026-1', '2025-12-25'),
-            # 赵同学的成绩
+            (student2_id, ma101_id, 94.0, '2025-2026-1', '2025-12-15'),
+            (student2_id, ph101_id, 85.5, '2025-2026-1', '2025-12-18'),
+            (student2_id, en101_id, 92.0, '2025-2026-1', '2025-12-25'),
+            
+            # 计科2102班学生
             (student3_id, cs101_id, 76.0, '2025-2026-1', '2025-12-20'),
             (student3_id, cs102_id, 82.5, '2025-2026-1', '2025-12-22'),
-            (student3_id, cs201_id, 79.0, '2025-2026-1', '2025-12-25')
+            (student3_id, ma101_id, 79.0, '2025-2026-1', '2025-12-15'),
+            (student3_id, ph101_id, 75.0, '2025-2026-1', '2025-12-18'),
+            (student3_id, en101_id, 85.0, '2025-2026-1', '2025-12-25'),
+            
+            (student4_id, cs101_id, 88.0, '2025-2026-1', '2025-12-20'),
+            (student4_id, cs102_id, 91.5, '2025-2026-1', '2025-12-22'),
+            (student4_id, ma101_id, 86.0, '2025-2026-1', '2025-12-15'),
+            (student4_id, ph101_id, 82.5, '2025-2026-1', '2025-12-18'),
+            (student4_id, en101_id, 93.0, '2025-2026-1', '2025-12-25'),
+            
+            # 软工2101班学生
+            (student5_id, cs101_id, 83.0, '2025-2026-1', '2025-12-20'),
+            (student5_id, cs102_id, 87.5, '2025-2026-1', '2025-12-22'),
+            (student5_id, ma101_id, 80.0, '2025-2026-1', '2025-12-15'),
+            (student5_id, ph101_id, 78.5, '2025-2026-1', '2025-12-18'),
+            (student5_id, en101_id, 89.0, '2025-2026-1', '2025-12-25'),
+            
+            (student6_id, cs101_id, 92.5, '2025-2026-1', '2025-12-20'),
+            (student6_id, cs102_id, 95.0, '2025-2026-1', '2025-12-22'),
+            (student6_id, ma101_id, 91.0, '2025-2026-1', '2025-12-15'),
+            (student6_id, ph101_id, 88.0, '2025-2026-1', '2025-12-18'),
+            (student6_id, en101_id, 94.5, '2025-2026-1', '2025-12-25'),
+            
+            # 软工2102班学生
+            (student7_id, cs101_id, 79.5, '2025-2026-1', '2025-12-20'),
+            (student7_id, cs102_id, 84.0, '2025-2026-1', '2025-12-22'),
+            (student7_id, ma101_id, 77.0, '2025-2026-1', '2025-12-15'),
+            (student7_id, ph101_id, 81.0, '2025-2026-1', '2025-12-18'),
+            (student7_id, en101_id, 86.5, '2025-2026-1', '2025-12-25'),
+            
+            # 数学2101班学生
+            (student8_id, ma101_id, 96.0, '2025-2026-1', '2025-12-15'),
+            (student8_id, ph101_id, 89.5, '2025-2026-1', '2025-12-18'),
+            (student8_id, en101_id, 91.0, '2025-2026-1', '2025-12-25'),
+            
+            (student9_id, ma101_id, 93.5, '2025-2026-1', '2025-12-15'),
+            (student9_id, ph101_id, 87.0, '2025-2026-1', '2025-12-18'),
+            (student9_id, en101_id, 88.5, '2025-2026-1', '2025-12-25'),
+            
+            # 物理2101班学生
+            (student10_id, ma101_id, 90.0, '2025-2026-1', '2025-12-15'),
+            (student10_id, ph101_id, 95.5, '2025-2026-1', '2025-12-18'),
+            (student10_id, en101_id, 85.0, '2025-2026-1', '2025-12-25'),
+            
+            # 第二学期成绩（部分学生）
+            (student1_id, cs301_id, 87.0, '2025-2026-2', '2026-05-15'),
+            (student1_id, cs302_id, 83.5, '2025-2026-2', '2026-05-18'),
+            (student1_id, cs303_id, 79.0, '2025-2026-2', '2026-05-20'),
+            (student1_id, ma201_id, 85.0, '2025-2026-2', '2026-05-22'),
+            
+            (student2_id, cs301_id, 91.5, '2025-2026-2', '2026-05-15'),
+            (student2_id, cs302_id, 89.0, '2025-2026-2', '2026-05-18'),
+            (student2_id, cs303_id, 92.5, '2025-2026-2', '2026-05-20'),
+            (student2_id, ma201_id, 94.0, '2025-2026-2', '2026-05-22')
         ]
         for score in scores:
             cursor.execute(
@@ -285,6 +457,27 @@ def init_database():
         logger.info("   密码: student123")
         logger.info("   角色: 学生")
         logger.info("   用户名: student3")
+        logger.info("   密码: student123")
+        logger.info("   角色: 学生")
+        logger.info("   用户名: student4")
+        logger.info("   密码: student123")
+        logger.info("   角色: 学生")
+        logger.info("   用户名: student5")
+        logger.info("   密码: student123")
+        logger.info("   角色: 学生")
+        logger.info("   用户名: student6")
+        logger.info("   密码: student123")
+        logger.info("   角色: 学生")
+        logger.info("   用户名: student7")
+        logger.info("   密码: student123")
+        logger.info("   角色: 学生")
+        logger.info("   用户名: student8")
+        logger.info("   密码: student123")
+        logger.info("   角色: 学生")
+        logger.info("   用户名: student9")
+        logger.info("   密码: student123")
+        logger.info("   角色: 学生")
+        logger.info("   用户名: student10")
         logger.info("   密码: student123")
         logger.info("   角色: 学生")
         logger.info("\n现在您可以运行 'python main.py' 启动学生管理系统客户端了！")

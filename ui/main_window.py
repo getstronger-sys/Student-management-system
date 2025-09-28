@@ -37,6 +37,9 @@ class MainWindow(QMainWindow):
         self.role = user_info['role']
         self.username = user_info['username']
         
+        # 标记是否在执行注销流程，用于关闭事件中绕过二次确认
+        self.is_logging_out = False
+        
         # 设置窗口属性
         self.setWindowTitle(f"{MAIN_WINDOW_CONFIG['title']} - {USER_ROLES[self.role]}")
         self.setGeometry(
@@ -303,8 +306,33 @@ class MainWindow(QMainWindow):
             # 断开与服务器的连接
             client.disconnect()
             
+            # 标记登出流程，避免 closeEvent 再次弹出确认
+            self.is_logging_out = True
+            
+            # 显示登录窗口
+            self.show_login_window()
+            
             # 关闭主窗口
             self.close()
+
+    def show_login_window(self):
+        """显示登录窗口，并在登录成功后打开新的主窗口"""
+        from ui.login_window import LoginWindow
+        from PyQt5.QtWidgets import QApplication
+        app = QApplication.instance()
+        
+        # 保持全局引用，避免因当前窗口关闭导致对象被GC
+        app.login_window = LoginWindow()
+        
+        def on_login_success(user_info):
+            app.main_window = MainWindow(user_info)
+            app.main_window.show()
+            # 登录成功后关闭登录窗口
+            app.login_window.close()
+            app.login_window = None
+        
+        app.login_window.login_success.connect(on_login_success)
+        app.login_window.show()
     
     def show_about_dialog(self):
         """显示关于对话框"""
@@ -316,6 +344,11 @@ class MainWindow(QMainWindow):
     
     def closeEvent(self, event):
         """重写关闭事件"""
+        # 如果是登出流程触发的关闭，直接接受关闭
+        if getattr(self, 'is_logging_out', False):
+            event.accept()
+            return
+        
         # 确认退出
         reply = QMessageBox.question(
             self,

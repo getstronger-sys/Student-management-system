@@ -131,9 +131,9 @@ class Teacher:
     def search_teachers(keyword):
         """搜索教师信息(管理员权限)"""
         try:
-            query = "SELECT * FROM teachers WHERE teacher_id LIKE %s OR name LIKE %s OR title LIKE %s OR department LIKE %s"
+            query = "SELECT * FROM teachers WHERE teacher_id LIKE %s OR name LIKE %s"
             keyword = f"%{keyword}%"
-            result = db_manager.execute_query(query, (keyword, keyword, keyword, keyword))
+            result = db_manager.execute_query(query, (keyword, keyword))
             return result
         except Exception as e:
             logger.error(f"搜索教师信息失败: {e}")

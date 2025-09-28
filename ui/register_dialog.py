@@ -56,7 +56,7 @@ class RegisterDialog(QDialog):
         password_label.setFixedWidth(80)
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.Password)
-        self.password_edit.setPlaceholderText("请输入密码")
+        self.password_edit.setPlaceholderText("请输入密码(至少6位)")
         password_layout.addWidget(password_label)
         password_layout.addWidget(self.password_edit)
         layout.addLayout(password_layout)
@@ -106,6 +106,9 @@ class RegisterDialog(QDialog):
             return
         if not password:
             QMessageBox.warning(self, "输入错误", "请输入密码")
+            return
+        if len(password) < 6:
+            QMessageBox.warning(self, "输入错误", "密码长度不得小于6位")
             return
         if password != confirm:
             QMessageBox.warning(self, "输入错误", "两次输入的密码不一致")

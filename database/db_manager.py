@@ -36,6 +36,8 @@ class DatabaseManager:
             )
             self.cursor = self.connection.cursor()
             logger.info("数据库连接成功")
+            # 连接成功后执行必要的迁移（如新增 email 字段）
+            self._migrate_schema()
         except Exception as e:
             logger.error(f"数据库连接失败: {e}")
             # 如果数据库不存在，尝试创建
@@ -67,6 +69,7 @@ class DatabaseManager:
                     password VARCHAR(100) NOT NULL,
                     role VARCHAR(20) NOT NULL,
                     name VARCHAR(50) NOT NULL,
+                    email VARCHAR(100),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -143,6 +146,21 @@ class DatabaseManager:
             logger.info("数据库和表结构创建成功")
         except Exception as e:
             logger.error(f"创建数据库失败: {e}")
+    
+    def _migrate_schema(self):
+        """执行必要的数据库迁移（幂等）"""
+        try:
+            # 确保 users 表存在 email 字段（MySQL 8.0 支持 IF NOT EXISTS）
+            self.cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(100)")
+        except Exception as e:
+            # 如果目标版本较低不支持 IF NOT EXISTS，则检查字段是否存在再添加
+            try:
+                self.cursor.execute("SHOW COLUMNS FROM users LIKE 'email'")
+                col = self.cursor.fetchone()
+                if not col:
+                    self.cursor.execute("ALTER TABLE users ADD COLUMN email VARCHAR(100)")
+            except Exception as inner_e:
+                logger.warning(f"迁移检查失败: {inner_e}")
     
     def execute_query(self, query, params=None):
         """执行查询语句"""
