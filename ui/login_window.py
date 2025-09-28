@@ -13,6 +13,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread
 from PyQt5.QtGui import QFont, QIcon
 from network.client import client
 from config.config import LOGIN_WINDOW_CONFIG
+from ui.register_dialog import RegisterDialog
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -121,6 +122,19 @@ class LoginWindow(QMainWindow):
         self.login_button.clicked.connect(self.handle_login)
         button_layout.addWidget(self.login_button)
         
+        # 新增：注册按钮
+        self.register_button = QPushButton("注册")
+        self.register_button.setMinimumHeight(40)
+        self.register_button.setStyleSheet(
+            "QPushButton { background-color: #2196F3; color: white; border-radius: 5px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #1976D2; }"
+            "QPushButton:disabled { background-color: #cccccc; color: #666666; }"
+        )
+        self.register_button.clicked.connect(self.open_register_dialog)
+        # 只有连接成功时允许注册，以便调用后端
+        self.register_button.setEnabled(False)
+        button_layout.addWidget(self.register_button)
+        
         # 取消按钮
         self.cancel_button = QPushButton("取消")
         self.cancel_button.setMinimumHeight(40)
@@ -148,6 +162,7 @@ class LoginWindow(QMainWindow):
                 self.status_label.setText("服务器连接成功")
                 self.status_label.setStyleSheet("color: green;")
                 self.login_button.setEnabled(True)
+                self.register_button.setEnabled(True)
                 self.username_edit.setFocus()
                 logger.info("服务器连接成功")
             else:
@@ -258,6 +273,16 @@ class LoginWindow(QMainWindow):
             self.login_button.setEnabled(True)
             self.status_label.setText("服务器连接成功")
             self.status_label.setStyleSheet("color: green;")
+            self.register_button.setEnabled(self.connected)
+        
+    def open_register_dialog(self):
+        """打开注册对话框"""
+        dialog = RegisterDialog(self)
+        dialog.exec_()
+        if getattr(dialog, 'register_success', False):
+            # 回填用户名，便于用户直接登录
+            self.username_edit.setText(dialog.registered_username or '')
+            self.password_edit.setFocus()
     
     def handle_cancel(self):
         """处理取消事件"""

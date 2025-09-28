@@ -27,7 +27,7 @@ logger = logging.getLogger('init_database')
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': '123456',  # 默认密码，实际使用时应修改
+    'password': 'zhyzywxj1825907',  # 默认密码，实际使用时应修改
     'database': 'student_management',
     'port': 3306
 }

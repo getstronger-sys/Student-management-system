@@ -31,8 +31,8 @@ MAIN_WINDOW_CONFIG = {
 # 数据库配置
 DB_CONFIG = {
     'host': 'localhost',
-    'user': 'shared_user',  # 共享数据库用户
-    'password': 'shared_password',  # 共享数据库密码
+    'user': 'root',  # 共享数据库用户
+    'password': 'zhyzywxj1825907',  # 共享数据库密码
     'database': 'student_management',
     'port': 3306
 }

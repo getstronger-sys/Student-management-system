@@ -19,7 +19,8 @@ class Client:
     def __init__(self):
         """初始化客户端"""
         # 修改为服务器的IP地址，组内其他同学运行时需要将此地址改为服务器同学的IP
-        self.host = '10.29.108.168'  # 客户端连接地址（校园网IP）
+        #self.host = '10.29.108.168'  # 客户端连接地址（校园网IP）
+        self.host = '127.0.0.1'
         self.port = NETWORK_CONFIG['port']
         self.client_socket = None
         self.connected = False
@@ -120,6 +121,16 @@ class Client:
     def login(self, username, password):
         """登录到系统"""
         return self.send_request('login', {'username': username, 'password': password})
+    
+    # 新增：快捷方法：注册
+    def register(self, username, password, role, name):
+        """注册新用户"""
+        return self.send_request('register', {
+            'username': username,
+            'password': password,
+            'role': role,
+            'name': name
+        })
     
     # 快捷方法：注销
     def logout(self):

@@ -190,6 +190,15 @@ class Server:
         elif action == 'logout':
             return {'success': True, 'message': '注销成功'}
         
+        # 处理注册请求（未登录也可执行）
+        elif action == 'register':
+            username = params.get('username')
+            password = params.get('password')
+            role = params.get('role')
+            name = params.get('name') or username
+            success = User.register(username, password, role, name)
+            return {'success': success, 'message': '注册成功' if success else '注册失败或用户名已存在'}
+        
         # 以下操作需要用户登录
         if not current_user:
             return {'success': False, 'message': '请先登录'}
