@@ -15,7 +15,7 @@ class Course:
     """课程类，封装课程相关的业务逻辑"""
     
     @staticmethod
-    def add_course(course_code, course_name, credits, teacher_id, semester):
+    def add_course(course_code, course_name, credits, teacher_id, semester, time=None):
         """添加课程信息"""
         try:
             # 检查课程代码是否已存在
@@ -25,6 +25,15 @@ class Course:
             if result and len(result) > 0:
                 logger.warning(f"添加课程失败: 课程代码 {course_code} 已存在")
                 return False
+            
+            # 验证teacher_id是否存在
+            if teacher_id is not None:
+                teacher_query = "SELECT id FROM teachers WHERE id = %s"
+                teacher_result = db_manager.execute_query(teacher_query, (teacher_id,))
+                
+                if not teacher_result:
+                    logger.error(f"添加课程失败: 教师ID {teacher_id} 不存在")
+                    return False
             
             # 插入课程信息
             query = "INSERT INTO courses (course_code, course_name, credits, teacher_id, semester) VALUES (%s, %s, %s, %s, %s)"
@@ -41,24 +50,37 @@ class Course:
             return False
     
     @staticmethod
-    def update_course(course_code, course_name=None, credits=None, teacher_id=None, semester=None):
+    def update_course(course_id, code, name, credit, teacher_id, semester, time):
         """更新课程信息"""
         try:
             # 构建更新语句
             updates = []
             params = []
             
-            if course_name:
-                updates.append("course_name = %s")
-                params.append(course_name)
-            
-            if credits is not None:
-                updates.append("credits = %s")
-                params.append(credits)
-            
+            # 验证teacher_id是否存在（如果提供了非空值）
             if teacher_id is not None:
+                # 检查教师ID是否存在
+                teacher_query = "SELECT id FROM teachers WHERE id = %s"
+                teacher_result = db_manager.execute_query(teacher_query, (teacher_id,))
+                
+                if not teacher_result:
+                    logger.error(f"更新课程失败: 教师ID {teacher_id} 不存在")
+                    return False
+                
                 updates.append("teacher_id = %s")
                 params.append(teacher_id)
+            
+            if code:
+                updates.append("course_code = %s")
+                params.append(code)
+            
+            if name:
+                updates.append("course_name = %s")
+                params.append(name)
+            
+            if credit is not None:
+                updates.append("credits = %s")
+                params.append(credit)
             
             if semester:
                 updates.append("semester = %s")
@@ -67,18 +89,18 @@ class Course:
             if not updates:
                 return True
             
-            # 添加course_code到参数列表
-            params.append(course_code)
+            # 添加course_id到参数列表
+            params.append(course_id)
             
             # 执行更新
-            query = f"UPDATE courses SET {', '.join(updates)} WHERE course_code = %s"
+            query = f"UPDATE courses SET {', '.join(updates)} WHERE id = %s"
             result = db_manager.execute_update(query, tuple(params))
             
             if result > 0:
-                logger.info(f"课程 (代码: {course_code}) 信息更新成功")
+                logger.info(f"课程 (ID: {course_id}) 信息更新成功")
                 return True
             else:
-                logger.warning(f"课程 (代码: {course_code}) 信息更新失败")
+                logger.warning(f"课程 (ID: {course_id}) 信息更新失败")
                 return False
         except Exception as e:
             logger.error(f"更新课程信息失败: {e}")
@@ -135,17 +157,17 @@ class Course:
             return None
     
     @staticmethod
-    def delete_course(course_code):
+    def delete_course(course_id):
         """删除课程信息(管理员权限)"""
         try:
-            query = "DELETE FROM courses WHERE course_code = %s"
-            result = db_manager.execute_update(query, (course_code,))
+            query = "DELETE FROM courses WHERE id = %s"
+            result = db_manager.execute_update(query, (course_id,))
             
             if result > 0:
-                logger.info(f"课程 (代码: {course_code}) 删除成功")
+                logger.info(f"课程 (ID: {course_id}) 删除成功")
                 return True
             else:
-                logger.warning(f"课程 (代码: {course_code}) 删除失败")
+                logger.warning(f"课程 (ID: {course_id}) 删除失败")
                 return False
         except Exception as e:
             logger.error(f"删除课程信息失败: {e}")

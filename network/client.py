@@ -208,6 +208,42 @@ class Client:
     def delete_teacher_admin(self, teacher_id):
         return self.send_request('delete_teacher', {'teacher_id': teacher_id})
     
+    # 课程管理（管理员）
+    def add_course_admin(self, code, name, credit, teacher_id, semester, time):
+        """添加课程（管理员）"""
+        return self.send_request('add_course', {
+            'code': code,
+            'name': name,
+            'credit': credit,
+            'teacher_id': teacher_id,
+            'semester': semester,
+            'time': time
+        })
+    
+    def update_course_admin(self, course_id, code, name, credit, teacher_id, semester, time):
+        """更新课程（管理员）"""
+        return self.send_request('update_course', {
+            'course_id': course_id,
+            'code': code,
+            'name': name,
+            'credit': credit,
+            'teacher_id': teacher_id,
+            'semester': semester,
+            'time': time
+        })
+    
+    def delete_course_admin(self, course_id):
+        """删除课程（管理员）"""
+        return self.send_request('delete_course', {'course_id': course_id})
+    
+    def get_all_courses_admin(self):
+        """获取所有课程（管理员）"""
+        return self.send_request('get_all_courses', {})
+    
+    def search_courses_admin(self, keyword):
+        """搜索课程（管理员）"""
+        return self.send_request('search_courses', {'keyword': keyword})
+    
     # 个人密码修改（登录用户）
     def change_password(self, new_password: str):
         return self.send_request('change_password', {'password': new_password})

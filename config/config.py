@@ -32,7 +32,7 @@ MAIN_WINDOW_CONFIG = {
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',  # 共享数据库用户
-    'password': 'zhyzywxj1825907',  # 共享数据库密码
+    'password': '123456',  # Docker数据库密码
     'database': 'student_management',
     'port': 3306
 }

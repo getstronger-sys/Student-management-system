@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
     QTableWidgetItem, QTabWidget, QFrame, QMessageBox, QComboBox,
     QPushButton, QLineEdit, QFormLayout, QGroupBox, QDialog, 
-    QDialogButtonBox, QInputDialog, QCheckBox, QDateEdit
+    QDialogButtonBox, QInputDialog, QCheckBox, QDateEdit, QDoubleSpinBox
 )
 from PyQt5.QtCore import Qt, QDate
 from PyQt5.QtGui import QFont
@@ -50,6 +50,8 @@ class AdminDashboard(QWidget):
         # 新增：进入页面即加载学生与教师列表
         self.load_students()
         self.load_teachers()
+        # 加载课程列表
+        self.load_courses()
     
     def init_ui(self):
         """初始化用户界面"""
@@ -268,15 +270,18 @@ class AdminDashboard(QWidget):
         
         # 刷新按钮
         self.refresh_courses_button = QPushButton("刷新")
+        self.refresh_courses_button.clicked.connect(self.load_courses)
         actions_layout.addWidget(self.refresh_courses_button)
-        
+
         # 搜索框
         self.courses_search_edit = QLineEdit()
         self.courses_search_edit.setPlaceholderText("搜索课程名称或代码")
+        self.courses_search_edit.returnPressed.connect(self.search_courses)
         actions_layout.addWidget(self.courses_search_edit)
-        
+
         # 搜索按钮
         self.search_courses_button = QPushButton("搜索")
+        self.search_courses_button.clicked.connect(self.search_courses)
         actions_layout.addWidget(self.search_courses_button)
         
         # 添加操作按钮布局到主布局
@@ -679,7 +684,144 @@ class AdminDashboard(QWidget):
     
     def add_course(self):
         """添加课程"""
-        QMessageBox.information(self, "功能提示", "添加课程功能待实现")
+        dialog = AddCourseDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_courses()
+    
+    def load_courses(self):
+        """加载课程数据"""
+        try:
+            # 使用新添加的客户端方法
+            response = client.get_all_courses_admin()
+            
+            if response.get('success'):
+                courses = response.get('courses', [])
+                
+                # 清空表格
+                self.courses_table.setRowCount(0)
+                
+                # 填充表格
+                for course in courses:
+                    row_position = self.courses_table.rowCount()
+                    self.courses_table.insertRow(row_position)
+                    
+                    # 设置表格数据
+                    self.courses_table.setItem(row_position, 0, QTableWidgetItem(str(course.get('id', ''))))
+                    self.courses_table.setItem(row_position, 1, QTableWidgetItem(course.get('course_code', '')))
+                    self.courses_table.setItem(row_position, 2, QTableWidgetItem(course.get('course_name', '')))
+                    self.courses_table.setItem(row_position, 3, QTableWidgetItem(str(course.get('credits', ''))))
+                    # 使用teacher_id代替teacher_name
+                    teacher_id = course.get('teacher_id')
+                    teacher_name = f"ID: {teacher_id}" if teacher_id else '未知'
+                    self.courses_table.setItem(row_position, 4, QTableWidgetItem(teacher_name))
+                    self.courses_table.setItem(row_position, 5, QTableWidgetItem(course.get('semester', '')))
+                    # 服务器返回的数据中没有class_time字段，设置为空字符串
+                    self.courses_table.setItem(row_position, 6, QTableWidgetItem(''))
+                    
+                    # 创建操作按钮
+                    action_widget = QWidget()
+                    action_layout = QHBoxLayout(action_widget)
+                    action_layout.setContentsMargins(0, 0, 0, 0)
+                    
+                    # 编辑按钮
+                    edit_button = QPushButton("编辑")
+                    edit_button.setMaximumWidth(60)
+                    edit_button.clicked.connect(lambda checked, course_id=course.get('id'), course_data=course: self.edit_course(course_id, course_data))
+                    action_layout.addWidget(edit_button)
+                    
+                    # 删除按钮
+                    delete_button = QPushButton("删除")
+                    delete_button.setMaximumWidth(60)
+                    delete_button.setStyleSheet("color: red;")
+                    delete_button.clicked.connect(lambda checked, course_id=course.get('id'): self.delete_course(course_id))
+                    action_layout.addWidget(delete_button)
+                    
+                    self.courses_table.setCellWidget(row_position, 7, action_widget)
+                
+                # 调整表格列宽
+                self.courses_table.resizeColumnsToContents()
+        except Exception as e:
+            logger.error(f"加载课程数据失败: {e}")
+            QMessageBox.warning(self, "加载失败", f"加载课程数据失败: {str(e)}")
+    
+    def search_courses(self):
+        """搜索课程"""
+        keyword = self.courses_search_edit.text().strip()
+        if not keyword:
+            self.load_courses()
+            return
+        try:
+            # 使用新添加的客户端方法
+            response = client.search_courses_admin(keyword)
+            if response.get('success'):
+                courses = response.get('courses', [])
+                # 清空表格
+                self.courses_table.setRowCount(0)
+                # 填充表格（复用 load_courses 的渲染规则）
+                for course in courses:
+                    row_position = self.courses_table.rowCount()
+                    self.courses_table.insertRow(row_position)
+                    self.courses_table.setItem(row_position, 0, QTableWidgetItem(str(course.get('id', ''))))
+                    self.courses_table.setItem(row_position, 1, QTableWidgetItem(course.get('course_code', '')))
+                    self.courses_table.setItem(row_position, 2, QTableWidgetItem(course.get('course_name', '')))
+                    self.courses_table.setItem(row_position, 3, QTableWidgetItem(str(course.get('credits', ''))))
+                    self.courses_table.setItem(row_position, 4, QTableWidgetItem(course.get('teacher_name', '未知')))
+                    self.courses_table.setItem(row_position, 5, QTableWidgetItem(course.get('semester', '')))
+                    self.courses_table.setItem(row_position, 6, QTableWidgetItem(course.get('class_time', '')))
+                    action_widget = QWidget()
+                    action_layout = QHBoxLayout(action_widget)
+                    action_layout.setContentsMargins(0, 0, 0, 0)
+                    edit_button = QPushButton("编辑")
+                    edit_button.setMaximumWidth(60)
+                    edit_button.clicked.connect(lambda checked, course_id=course.get('id'), course_data=course: self.edit_course(course_id, course_data))
+                    action_layout.addWidget(edit_button)
+                    delete_button = QPushButton("删除")
+                    delete_button.setMaximumWidth(60)
+                    delete_button.setStyleSheet("color: red;")
+                    delete_button.clicked.connect(lambda checked, course_id=course.get('id'): self.delete_course(course_id))
+                    action_layout.addWidget(delete_button)
+                    self.courses_table.setCellWidget(row_position, 7, action_widget)
+                self.courses_table.resizeColumnsToContents()
+            else:
+                QMessageBox.warning(self, "搜索失败", response.get('message', '搜索课程失败'))
+        except Exception as e:
+            logger.error(f"搜索课程失败: {e}")
+            QMessageBox.critical(self, "错误", f"搜索课程失败: {str(e)}")
+    
+    def edit_course(self, course_id, course_data=None):
+        """编辑课程"""
+        dialog = EditCourseDialog(self, course_id, course_data)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_courses()
+    
+    def delete_course(self, course_id):
+        """删除课程"""
+        # 确认删除
+        reply = QMessageBox.question(
+            self,
+            "确认删除",
+            f"确定要删除课程ID为 {course_id} 的课程吗？",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            try:
+                # 使用新添加的客户端方法
+                response = client.delete_course_admin(course_id)
+                
+                if response.get('success'):
+                    # 删除成功，刷新课程列表
+                    logger.info(f"课程ID {course_id} 已删除")
+                    self.load_courses()
+                    QMessageBox.information(self, "删除成功", "课程删除成功")
+                else:
+                    # 删除失败
+                    logger.warning(f"删除课程ID {course_id} 失败")
+                    QMessageBox.warning(self, "删除失败", "课程删除失败")
+            except Exception as e:
+                logger.error(f"删除课程时发生错误: {e}")
+                QMessageBox.critical(self, "删除错误", f"删除课程时发生错误: {str(e)}")
     
     def backup_database(self):
         """备份数据库"""
@@ -1249,6 +1391,253 @@ class AddTeacherDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "错误", f"添加教师失败: {str(e)}")
 
+
+class EditCourseDialog(QDialog):
+    def __init__(self, parent=None, course_id=None, course_data=None):
+        super().__init__(parent)
+        self.setWindowTitle("编辑课程")
+        self.setMinimumWidth(400)
+        self.courses_tab = parent
+        self.course_id = course_id
+        self.course_data = course_data or {}
+        self.init_ui()
+        self.load_data()
+
+    def init_ui(self):
+        # 创建表单布局
+        layout = QVBoxLayout()
+        form_layout = QFormLayout()
+
+        # 课程代码
+        self.code_edit = QLineEdit()
+        self.code_edit.setPlaceholderText("请输入课程代码")
+        form_layout.addRow("课程代码:", self.code_edit)
+
+        # 课程名称
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("请输入课程名称")
+        form_layout.addRow("课程名称:", self.name_edit)
+
+        # 学分
+        self.credit_spin = QDoubleSpinBox()
+        self.credit_spin.setRange(0.5, 10.0)
+        self.credit_spin.setSingleStep(0.5)
+        self.credit_spin.setValue(3.0)
+        form_layout.addRow("学分:", self.credit_spin)
+
+        # 教师ID
+        self.teacher_id_edit = QLineEdit()
+        self.teacher_id_edit.setPlaceholderText("请输入教师ID")
+        form_layout.addRow("教师ID:", self.teacher_id_edit)
+
+        # 学期
+        self.semester_edit = QLineEdit()
+        self.semester_edit.setPlaceholderText("如：2023-2024-1")
+        form_layout.addRow("学期:", self.semester_edit)
+
+        # 上课时间
+        self.time_edit = QLineEdit()
+        self.time_edit.setPlaceholderText("如：周一1-2节")
+        form_layout.addRow("上课时间:", self.time_edit)
+
+        # 添加表单到主布局
+        layout.addLayout(form_layout)
+
+        # 按钮布局
+        button_layout = QHBoxLayout()
+        self.cancel_button = QPushButton("取消")
+        self.submit_button = QPushButton("提交")
+
+        self.cancel_button.clicked.connect(self.reject)
+        self.submit_button.clicked.connect(self.accept)
+
+        button_layout.addWidget(self.cancel_button)
+        button_layout.addWidget(self.submit_button)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def load_data(self):
+        if self.course_data:
+            self.code_edit.setText(self.course_data.get('course_code', ''))
+            self.name_edit.setText(self.course_data.get('course_name', ''))
+            self.credit_spin.setValue(float(self.course_data.get('credits', 3.0)))
+            self.teacher_id_edit.setText(str(self.course_data.get('teacher_id', '')))
+            self.semester_edit.setText(self.course_data.get('semester', ''))
+            self.time_edit.setText(self.course_data.get('class_time', ''))
+
+    def accept(self):
+        # 获取表单数据
+        code = self.code_edit.text().strip()
+        name = self.name_edit.text().strip()
+        credit = self.credit_spin.value()
+        teacher_id = self.teacher_id_edit.text().strip()
+        semester = self.semester_edit.text().strip()
+        time = self.time_edit.text().strip()
+
+        # 验证表单
+        if not code:
+            QMessageBox.warning(self, "警告", "请输入课程代码")
+            return
+        if not name:
+            QMessageBox.warning(self, "警告", "请输入课程名称")
+            return
+        if not teacher_id.isdigit():
+            QMessageBox.warning(self, "警告", "教师ID必须为数字")
+            return
+        if not semester:
+            QMessageBox.warning(self, "警告", "请输入学期")
+            return
+
+        try:
+            # 调用客户端更新课程
+            result = client.update_course_admin(
+                course_id=self.course_id,
+                code=code,
+                name=name,
+                credit=credit,
+                teacher_id=int(teacher_id),
+                semester=semester,
+                time=time
+            )
+            if result.get('success'):
+                QMessageBox.information(self, "成功", "课程更新成功")
+                # 刷新课程列表
+                self.courses_tab.load_courses()
+                super().accept()
+            else:
+                QMessageBox.warning(self, "失败", result.get('message', '更新失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"更新课程失败：{str(e)}")
+
+
+class AddCourseDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("添加课程")
+        self.setMinimumWidth(400)
+        self.courses_tab = parent
+        self.init_ui()
+
+    def init_ui(self):
+        # 创建表单布局
+        layout = QVBoxLayout()
+        form_layout = QFormLayout()
+
+        # 课程代码
+        self.code_edit = QLineEdit()
+        self.code_edit.setPlaceholderText("请输入课程代码")
+        form_layout.addRow("课程代码:", self.code_edit)
+
+        # 课程名称
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("请输入课程名称")
+        form_layout.addRow("课程名称:", self.name_edit)
+
+        # 学分
+        self.credit_spin = QDoubleSpinBox()
+        self.credit_spin.setRange(0.5, 10.0)
+        self.credit_spin.setSingleStep(0.5)
+        self.credit_spin.setValue(3.0)
+        form_layout.addRow("学分:", self.credit_spin)
+
+        # 教师ID
+        self.teacher_id_edit = QLineEdit()
+        self.teacher_id_edit.setPlaceholderText("请输入教师ID")
+        form_layout.addRow("教师ID:", self.teacher_id_edit)
+
+        # 学期
+        self.semester_edit = QLineEdit()
+        self.semester_edit.setPlaceholderText("如：2023-2024-1")
+        form_layout.addRow("学期:", self.semester_edit)
+
+        # 上课时间
+        self.time_edit = QLineEdit()
+        self.time_edit.setPlaceholderText("如：周一1-2节")
+        form_layout.addRow("上课时间:", self.time_edit)
+
+        # 添加表单到主布局
+        layout.addLayout(form_layout)
+
+        # 按钮布局
+        button_layout = QHBoxLayout()
+        self.cancel_button = QPushButton("取消")
+        self.submit_button = QPushButton("提交")
+
+        self.cancel_button.clicked.connect(self.reject)
+        self.submit_button.clicked.connect(self.accept)
+
+        button_layout.addWidget(self.cancel_button)
+        button_layout.addWidget(self.submit_button)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def accept(self):
+        # 获取表单数据
+        code = self.code_edit.text().strip()
+        name = self.name_edit.text().strip()
+        credit = self.credit_spin.value()
+        teacher_id = self.teacher_id_edit.text().strip()
+        semester = self.semester_edit.text().strip()
+        time = self.time_edit.text().strip()
+
+        # 验证表单
+        if not code:
+            QMessageBox.warning(self, "警告", "请输入课程代码")
+            return
+        if not name:
+            QMessageBox.warning(self, "警告", "请输入课程名称")
+            return
+        if not teacher_id.isdigit():
+            QMessageBox.warning(self, "警告", "教师ID必须为数字")
+            return
+        if not semester:
+            QMessageBox.warning(self, "警告", "请输入学期")
+            return
+
+        try:
+            # 调用客户端添加课程
+            result = client.add_course_admin(
+                code=code,
+                name=name,
+                credit=credit,
+                teacher_id=int(teacher_id),
+                semester=semester,
+                time=time
+            )
+            if result.get('success'):
+                QMessageBox.information(self, "成功", "课程添加成功")
+                # 刷新课程列表
+                self.courses_tab.load_courses()
+                super().accept()
+            else:
+                QMessageBox.warning(self, "失败", result.get('message', '添加失败'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"添加课程失败：{str(e)}")
+        if not semester:
+            QMessageBox.warning(self, "警告", "请输入学期")
+            return
+
+        try:
+            # 调用客户端添加课程
+            result = self.courses_tab.client.add_course_admin(
+                code=code,
+                name=name,
+                credit=credit,
+                teacher_id=int(teacher_id),
+                semester=semester,
+                time=time
+            )
+            if result["status"] == "success":
+                QMessageBox.information(self, "成功", "课程添加成功")
+                # 刷新课程列表
+                self.courses_tab.load_courses()
+                super().accept()
+            else:
+                QMessageBox.warning(self, "失败", result["message"])
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"添加课程失败：{str(e)}")
 
 # 测试代码
 if __name__ == '__main__':

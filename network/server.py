@@ -389,6 +389,42 @@ class Server:
             scores = Score.get_scores_by_course_and_semester(course_id, semester)
             stats = Score.get_score_statistics(course_id, semester)
             return {'success': True, 'scores': scores, 'stats': stats}
+            
+        # 新增：课程管理（管理员权限）
+        elif action == 'get_all_courses' and current_user['role'] == 'admin':
+            courses = Course.get_all_courses()
+            return {'success': True, 'courses': courses}
+        
+        elif action == 'search_courses' and current_user['role'] == 'admin':
+            keyword = params.get('keyword', '')
+            courses = Course.search_courses(keyword)
+            return {'success': True, 'courses': courses}
+        
+        elif action == 'add_course' and current_user['role'] == 'admin':
+            code = params.get('code')
+            name = params.get('name')
+            credit = params.get('credit')
+            teacher_id = params.get('teacher_id')
+            semester = params.get('semester')
+            time = params.get('time')
+            success = Course.add_course(code, name, credit, teacher_id, semester, time)
+            return {'success': success, 'message': '添加成功' if success else '添加失败'}
+            
+        elif action == 'update_course' and current_user['role'] == 'admin':
+            course_id = params.get('course_id')
+            code = params.get('code')
+            name = params.get('name')
+            credit = params.get('credit')
+            teacher_id = params.get('teacher_id')
+            semester = params.get('semester')
+            time = params.get('time')
+            success = Course.update_course(course_id, code, name, credit, teacher_id, semester, time)
+            return {'success': success, 'message': '更新成功' if success else '更新失败'}
+            
+        elif action == 'delete_course' and current_user['role'] == 'admin':
+            course_id = params.get('course_id')
+            success = Course.delete_course(course_id)
+            return {'success': success, 'message': '删除成功' if success else '删除失败'}
         
         # 其他操作...
         return {'success': False, 'message': '未知操作或权限不足'}
