@@ -5,12 +5,31 @@
 
 import pymysql
 from pymysql.cursors import DictCursor
-from config.config import DB_CONFIG
 import logging
+import os
+import subprocess
+import datetime
+import shutil
+from pathlib import Path
+
+# 数据库配置
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': '123456',  # Docker数据库密码（与docker-compose.yml一致）
+    'database': 'student_management',  # 数据库名称（与docker-compose.yml一致）
+    'port': 3306,
+    'charset': 'utf8mb4'
+}
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('db_manager')
+
+# 备份文件存储路径
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backups')
+# 缓存目录
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'cache')
 
 
 class DatabaseManager:
@@ -267,6 +286,235 @@ class DatabaseManager:
                 self.connection.rollback()
             return 0
     
+    def backup_database(self, use_docker=False):
+        """备份数据库到文件
+        
+        Args:
+            use_docker: 是否使用Docker方式备份（当MySQL运行在Docker容器中时设置为True）
+            
+        Returns:
+            备份文件路径，如果失败则返回None
+        """
+        try:
+            # 确保备份目录存在
+            os.makedirs(BACKUP_DIR, exist_ok=True)
+            
+            # 生成带时间戳的备份文件名
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_file = os.path.join(BACKUP_DIR, f'student_management_backup_{timestamp}.sql')
+            
+            if use_docker:
+                # 使用Docker方式备份（推荐）
+                # 检查docker是否可用
+                try:
+                    subprocess.run(['docker', '--version'], capture_output=True, text=True, check=True)
+                except Exception as e:
+                    logger.error(f"找不到docker命令，请确保Docker已安装: {e}")
+                    return None
+                
+                # 检查容器是否存在并运行
+                try:
+                    subprocess.run([
+                        'docker', 'exec', 'student_management_mysql', 
+                        'mysql', '-u', DB_CONFIG['user'], f"-p{DB_CONFIG['password']}", 
+                        '-e', 'SELECT 1'
+                    ], capture_output=True, text=True, check=True)
+                except Exception as e:
+                    logger.error(f"Docker容器不可用或数据库连接失败: {e}")
+                    return None
+                
+                # 使用docker exec运行容器内的mysqldump命令
+                cmd = [
+                    'docker', 'exec', 'student_management_mysql',
+                    'mysqldump',
+                    '-u', DB_CONFIG['user'],
+                    f"-p{DB_CONFIG['password']}",
+                    DB_CONFIG['database'],
+                    '--default-character-set=utf8mb4'
+                ]
+                
+                # 执行命令并将输出写入文件
+                try:
+                    with open(backup_file, 'w', encoding='utf-8') as f:
+                        result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True)
+                except Exception as e:
+                    logger.error(f"执行Docker备份命令时发生错误: {e}")
+                    return None
+            else:
+                # 传统方式备份（需要主机安装MySQL工具）
+                # 检查mysqldump命令是否可用
+                try:
+                    subprocess.run(['mysqldump', '--version'], capture_output=True, text=True, check=True)
+                    use_cmd = False
+                except (subprocess.SubprocessError, FileNotFoundError):
+                    # 如果mysqldump不在PATH中，尝试使用cmd /c调用
+                    try:
+                        subprocess.run(['cmd', '/c', 'mysqldump', '--version'], capture_output=True, text=True, check=True)
+                        use_cmd = True
+                    except Exception as e:
+                        logger.error(f"找不到mysqldump命令，请确保MySQL已安装并添加到系统PATH中或使用Docker方式备份: {e}")
+                        return None
+                
+                # 使用mysqldump命令备份数据库
+                if use_cmd:
+                    cmd = [
+                        'cmd', '/c',
+                        f'mysqldump -h {DB_CONFIG["host"]} -u {DB_CONFIG["user"]} -p{DB_CONFIG["password"]} -P {DB_CONFIG["port"]} {DB_CONFIG["database"]} --result-file={backup_file} --default-character-set=utf8mb4'
+                    ]
+                else:
+                    cmd = [
+                        'mysqldump',
+                        '-h', DB_CONFIG['host'],
+                        '-u', DB_CONFIG['user'],
+                        f"-p{DB_CONFIG['password']}",  # 注意这里密码和参数连在一起
+                        '-P', str(DB_CONFIG['port']),
+                        DB_CONFIG['database'],
+                        '--result-file', backup_file,
+                        '--default-character-set=utf8mb4'
+                    ]
+                
+                # 执行命令
+                result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                logger.info(f"数据库备份成功，文件保存至: {backup_file}")
+                return backup_file
+            else:
+                logger.error(f"数据库备份失败: {result.stderr}")
+                return None
+        except Exception as e:
+            logger.error(f"数据库备份过程中发生错误: {e}")
+            return None
+    
+    def restore_database(self, backup_file, use_docker=False):
+        """从备份文件恢复数据库
+        
+        Args:
+            backup_file: 备份文件路径
+            use_docker: 是否使用Docker方式恢复（当MySQL运行在Docker容器中时设置为True）
+            
+        Returns:
+            恢复是否成功
+        """
+        try:
+            # 检查备份文件是否存在
+            if not os.path.exists(backup_file):
+                logger.error(f"备份文件不存在: {backup_file}")
+                return False
+            
+            if use_docker:
+                # 使用Docker方式恢复（推荐）
+                # 检查docker是否可用
+                try:
+                    subprocess.run(['docker', '--version'], capture_output=True, text=True, check=True)
+                except Exception as e:
+                    logger.error(f"找不到docker命令，请确保Docker已安装: {e}")
+                    return False
+                
+                # 检查容器是否存在并运行
+                try:
+                    subprocess.run([
+                        'docker', 'exec', 'student_management_mysql', 
+                        'mysql', '-u', DB_CONFIG['user'], f"-p{DB_CONFIG['password']}", 
+                        '-e', 'SELECT 1'
+                    ], capture_output=True, text=True, check=True)
+                except Exception as e:
+                    logger.error(f"Docker容器不可用或数据库连接失败: {e}")
+                    return False
+                
+                # 使用docker exec运行容器内的mysql命令导入数据
+                cmd = [
+                    'docker', 'exec', '-i', 'student_management_mysql',
+                    'mysql',
+                    '-u', DB_CONFIG['user'],
+                    f"-p{DB_CONFIG['password']}",
+                    DB_CONFIG['database'],
+                    '--default-character-set=utf8mb4'
+                ]
+                
+                # 执行命令并从文件读取输入
+                try:
+                    with open(backup_file, 'r', encoding='utf-8') as f:
+                        result = subprocess.run(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                except Exception as e:
+                    logger.error(f"执行Docker恢复命令时发生错误: {e}")
+                    return False
+            else:
+                # 传统方式恢复（需要主机安装MySQL工具）
+                # 检查mysql命令是否可用
+                try:
+                    subprocess.run(['mysql', '--version'], capture_output=True, text=True, check=True)
+                    use_cmd = False
+                except (subprocess.SubprocessError, FileNotFoundError):
+                    # 如果mysql不在PATH中，尝试使用cmd /c调用
+                    try:
+                        subprocess.run(['cmd', '/c', 'mysql', '--version'], capture_output=True, text=True, check=True)
+                        use_cmd = True
+                    except Exception as e:
+                        logger.error(f"找不到mysql命令，请确保MySQL已安装并添加到系统PATH中或使用Docker方式恢复: {e}")
+                        return False
+                
+                # 使用mysql命令恢复数据库
+                if use_cmd:
+                    cmd = [
+                        'cmd', '/c',
+                        f'mysql -h {DB_CONFIG["host"]} -u {DB_CONFIG["user"]} -p{DB_CONFIG["password"]} -P {DB_CONFIG["port"]} {DB_CONFIG["database"]} --default-character-set=utf8mb4 < "{backup_file}"'
+                    ]
+                else:
+                    # 使用文件重定向方式导入数据
+                    with open(backup_file, 'r', encoding='utf-8') as f:
+                        cmd = [
+                            'mysql',
+                            '-h', DB_CONFIG['host'],
+                            '-u', DB_CONFIG['user'],
+                            f"-p{DB_CONFIG['password']}",
+                            '-P', str(DB_CONFIG['port']),
+                            DB_CONFIG['database'],
+                            '--default-character-set=utf8mb4'
+                        ]
+                        
+                        result = subprocess.run(cmd, stdin=f, capture_output=True, text=True)
+                
+                # 对于cmd方式，单独执行
+                if use_cmd:
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                logger.info(f"数据库恢复成功，从文件: {backup_file}")
+                # 恢复后重新连接数据库
+                self.close()
+                self.connect()
+                return True
+            else:
+                logger.error(f"数据库恢复失败: {result.stderr}")
+                return False
+        except Exception as e:
+            logger.error(f"数据库恢复过程中发生错误: {e}")
+            return False
+            
+    def clear_cache(self):
+        """清理系统缓存"""
+        try:
+            # 确保缓存目录存在
+            if not os.path.exists(CACHE_DIR):
+                os.makedirs(CACHE_DIR, exist_ok=True)
+                logger.info("缓存目录不存在，已创建")
+                return True
+            
+            # 遍历缓存目录并删除所有文件和子目录
+            for item in os.listdir(CACHE_DIR):
+                item_path = os.path.join(CACHE_DIR, item)
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+            
+            logger.info("系统缓存清理成功")
+            return True
+        except Exception as e:
+            logger.error(f"清理缓存过程中发生错误: {e}")
+            return False
+        
     def close(self):
         """关闭数据库连接"""
         try:

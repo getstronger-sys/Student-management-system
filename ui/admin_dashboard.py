@@ -11,11 +11,13 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
     QTableWidgetItem, QTabWidget, QFrame, QMessageBox, QComboBox,
     QPushButton, QLineEdit, QFormLayout, QGroupBox, QDialog, 
-    QDialogButtonBox, QInputDialog, QCheckBox, QDateEdit, QDoubleSpinBox
+    QDialogButtonBox, QInputDialog, QCheckBox, QDateEdit, QDoubleSpinBox,
+    QProgressDialog, QFileDialog
 )
 from PyQt5.QtCore import Qt, QDate
 from PyQt5.QtGui import QFont
@@ -25,6 +27,7 @@ from models.student import Student
 from models.teacher import Teacher
 from models.courses import Course
 from models.scores import Score
+from database.db_manager import db_manager
 import utils.data_visualization
 
 # 配置日志
@@ -829,15 +832,146 @@ class AdminDashboard(QWidget):
     
     def backup_database(self):
         """备份数据库"""
-        QMessageBox.information(self, "功能提示", "备份数据库功能待实现")
+        try:
+            # 显示确认对话框
+            reply = QMessageBox.question(
+                self, 
+                '确认备份', 
+                '确定要备份数据库吗？这将创建一个数据库的完整副本。',
+                QMessageBox.Yes | QMessageBox.No, 
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # 显示等待提示
+                waiting_dialog = QProgressDialog("正在备份数据库...", None, 0, 0, self)
+                waiting_dialog.setWindowTitle("备份中")
+                waiting_dialog.setWindowModality(Qt.WindowModal)
+                waiting_dialog.show()
+                
+                # 执行备份操作 - 使用Docker方式
+                backup_file = db_manager.backup_database(use_docker=True)
+                
+                # 关闭等待提示
+                waiting_dialog.close()
+                
+                if backup_file:
+                    # 显示备份成功信息
+                    QMessageBox.information(
+                        self, 
+                        "备份成功", 
+                        f"数据库备份成功！\n备份文件保存在：\n{backup_file}"
+                    )
+                else:
+                    # 显示备份失败信息，更新为Docker相关的原因
+                    QMessageBox.critical(
+                        self, 
+                        "备份失败", 
+                        "数据库备份失败，请查看日志获取详细信息。\n\n可能的原因：\n1. Docker未安装\n2. Docker容器未运行\n3. 数据库连接问题"
+                    )
+        except Exception as e:
+            logger.error(f"备份数据库时发生错误: {e}")
+            QMessageBox.critical(
+                self, 
+                "错误", 
+                f"备份数据库时发生错误: {str(e)}"
+            )
     
     def restore_database(self):
         """恢复数据库"""
-        QMessageBox.information(self, "功能提示", "恢复数据库功能待实现")
+        try:
+            # 显示确认对话框
+            reply = QMessageBox.question(
+                self, 
+                '警告', 
+                '恢复数据库将覆盖当前所有数据，确定要继续吗？\n\n请确保您已备份重要数据。',
+                QMessageBox.Yes | QMessageBox.No, 
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # 打开文件选择对话框
+                backup_file, _ = QFileDialog.getOpenFileName(
+                    self, 
+                    "选择备份文件", 
+                    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backups'),
+                    "SQL文件 (*.sql);;所有文件 (*)"
+                )
+                
+                if backup_file:
+                    # 显示等待提示
+                    waiting_dialog = QProgressDialog("正在恢复数据库...", None, 0, 0, self)
+                    waiting_dialog.setWindowTitle("恢复中")
+                    waiting_dialog.setWindowModality(Qt.WindowModal)
+                    waiting_dialog.show()
+                    
+                    # 执行恢复操作 - 使用Docker方式
+                    success = db_manager.restore_database(backup_file, use_docker=True)
+                    
+                    # 关闭等待提示
+                    waiting_dialog.close()
+                    
+                    if success:
+                        # 显示恢复成功信息并刷新数据
+                        QMessageBox.information(
+                            self, 
+                            "恢复成功", 
+                            "数据库恢复成功！系统数据已更新。"
+                        )
+                        # 刷新所有数据
+                        self.refresh()
+                    else:
+                        # 显示恢复失败信息，更新为Docker相关的原因
+                        QMessageBox.critical(
+                            self, 
+                            "恢复失败", 
+                            "数据库恢复失败，请查看日志获取详细信息。\n\n可能的原因：\n1. Docker未安装\n2. Docker容器未运行\n3. 备份文件损坏或不兼容\n4. 数据库连接问题"
+                        )
+        except Exception as e:
+            logger.error(f"恢复数据库时发生错误: {e}")
+            QMessageBox.critical(
+                self, 
+                "错误", 
+                f"恢复数据库时发生错误: {str(e)}"
+            )
     
     def clear_cache(self):
         """清理缓存"""
-        QMessageBox.information(self, "功能提示", "清理缓存功能待实现")
+        try:
+            # 显示确认对话框
+            reply = QMessageBox.question(
+                self, 
+                '确认清理', 
+                '确定要清理系统缓存吗？',
+                QMessageBox.Yes | QMessageBox.No, 
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # 执行清理操作
+                success = db_manager.clear_cache()
+                
+                if success:
+                    # 显示清理成功信息
+                    QMessageBox.information(
+                        self, 
+                        "清理成功", 
+                        "系统缓存清理成功！"
+                    )
+                else:
+                    # 显示清理失败信息
+                    QMessageBox.critical(
+                        self, 
+                        "清理失败", 
+                        "清理系统缓存失败，请查看日志获取详细信息。"
+                    )
+        except Exception as e:
+            logger.error(f"清理缓存时发生错误: {e}")
+            QMessageBox.critical(
+                self, 
+                "错误", 
+                f"清理缓存时发生错误: {str(e)}"
+            )
     
     def switch_page(self, page_name):
         """切换页面"""
