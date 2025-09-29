@@ -63,12 +63,14 @@ class Client:
         try:
             # 构建请求数据
             request = {'action': action, 'params': params or {}}
+            logger.debug(f"发送请求: {action}, 参数: {params}")
             
             # 发送数据
             self._send_data(request)
             
             # 接收响应
             response = self._receive_data()
+            logger.debug(f"接收响应: {action}, 响应: {response}")
             
             # 如果是登录成功，保存当前用户信息
             if action == 'login' and response.get('success'):
@@ -76,6 +78,16 @@ class Client:
             # 如果是注销成功，清除当前用户信息
             elif action == 'logout' and response.get('success'):
                 self.current_user = None
+            
+            # 特别处理课程数据，确保student_count字段存在
+            if action == 'get_my_courses' and response.get('success'):
+                courses = response.get('courses', [])
+                for course in courses:
+                    if 'student_count' not in course:
+                        course['student_count'] = 0
+                        logger.warning(f"课程 {course.get('course_name', '')} 缺少student_count字段")
+                    else:
+                        logger.info(f"课程 {course.get('course_name', '')} 学生人数: {course.get('student_count')}")
             
             return response
         except Exception as e:

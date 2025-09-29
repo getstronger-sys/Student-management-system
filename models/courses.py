@@ -146,6 +146,19 @@ class Course:
         try:
             query = "SELECT * FROM courses WHERE teacher_id = %s"
             result = db_manager.execute_query(query, (teacher_id,))
+            
+            # 为每个课程计算学生人数
+            if result:
+                for course in result:
+                    # 查询scores表，统计该课程的学生人数
+                    count_query = "SELECT COUNT(DISTINCT student_id) AS student_count FROM scores WHERE course_id = %s"
+                    count_result = db_manager.execute_query(count_query, (course['id'],))
+                    
+                    if count_result and len(count_result) > 0:
+                        course['student_count'] = count_result[0]['student_count']
+                    else:
+                        course['student_count'] = 0
+            
             return result
         except Exception as e:
             logger.error(f"获取教师课程失败: {e}")

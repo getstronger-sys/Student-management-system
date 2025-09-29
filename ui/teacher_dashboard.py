@@ -297,7 +297,7 @@ class TeacherDashboard(QWidget):
                 # 添加课程到下拉框和表格
                 for course in courses:
                     # 添加到下拉框
-                    self.course_combo.addItem(course.get('course_name', ''), course.get('course_id'))
+                    self.course_combo.addItem(course.get('course_name', ''), course.get('id'))
                     
                     # 添加到表格
                     row_position = self.courses_table.rowCount()
@@ -377,10 +377,113 @@ class TeacherDashboard(QWidget):
             logger.error(f"查询成绩失败: {e}")
             QMessageBox.warning(self, "查询失败", f"查询成绩失败: {str(e)}")
     
+    def load_students(self):
+        """加载学生数据"""
+        try:
+            # 获取所有学生数据
+            response = client.get_all_students_admin()
+            if response.get('success'):
+                students = response.get('students', [])
+                # 清空表格
+                self.students_table.setRowCount(0)
+                # 添加学生数据到表格
+                for s in students:
+                    row = self.students_table.rowCount()
+                    self.students_table.insertRow(row)
+                    
+                    # 根据表头顺序设置数据
+                    # 学生ID
+                    self.students_table.setItem(row, 0, QTableWidgetItem(s.get('student_id', '')))
+                    # 姓名
+                    self.students_table.setItem(row, 1, QTableWidgetItem(s.get('name', '')))
+                    # 性别
+                    self.students_table.setItem(row, 2, QTableWidgetItem(s.get('gender', '')))
+                    # 年龄（根据出生日期计算）
+                    age_text = ''
+                    try:
+                        birth_val = s.get('birth')
+                        if birth_val:
+                            from datetime import datetime, date
+                            if isinstance(birth_val, str):
+                                birth_date = datetime.strptime(birth_val, '%Y-%m-%d').date()
+                            elif isinstance(birth_val, date):
+                                birth_date = birth_val
+                            else:
+                                birth_date = None
+                            if birth_date:
+                                today = date.today()
+                                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                                age_text = str(age)
+                    except Exception:
+                        age_text = ''
+                    self.students_table.setItem(row, 3, QTableWidgetItem(age_text))
+                    # 专业
+                    self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
+                    # 班级
+                    self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
+                    # 操作列（空）
+                    self.students_table.setItem(row, 6, QTableWidgetItem(''))
+                # 调整列宽
+                self.students_table.resizeColumnsToContents()
+        except Exception as e:
+            logger.error(f"加载学生数据失败: {e}")
+            QMessageBox.warning(self, "加载失败", f"加载学生数据失败: {str(e)}")
+
     def search_students(self):
         """搜索学生"""
-        # 这里简化处理，实际可能需要调用特定的API搜索学生
-        QMessageBox.information(self, "功能提示", "学生搜索功能待实现")
+        keyword = self.students_search_edit.text().strip()
+        if not keyword:
+            self.load_students()
+            return
+        try:
+            # 根据关键词搜索学生
+            response = client.search_students_admin(keyword)
+            if response.get('success'):
+                students = response.get('students', [])
+                # 清空表格
+                self.students_table.setRowCount(0)
+                # 添加搜索到的学生数据到表格
+                for s in students:
+                    row = self.students_table.rowCount()
+                    self.students_table.insertRow(row)
+                    
+                    # 根据表头顺序设置数据
+                    # 学生ID
+                    self.students_table.setItem(row, 0, QTableWidgetItem(s.get('student_id', '')))
+                    # 姓名
+                    self.students_table.setItem(row, 1, QTableWidgetItem(s.get('name', '')))
+                    # 性别
+                    self.students_table.setItem(row, 2, QTableWidgetItem(s.get('gender', '')))
+                    # 年龄（根据出生日期计算）
+                    age_text = ''
+                    try:
+                        birth_val = s.get('birth')
+                        if birth_val:
+                            from datetime import datetime, date
+                            if isinstance(birth_val, str):
+                                birth_date = datetime.strptime(birth_val, '%Y-%m-%d').date()
+                            elif isinstance(birth_val, date):
+                                birth_date = birth_val
+                            else:
+                                birth_date = None
+                            if birth_date:
+                                today = date.today()
+                                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                                age_text = str(age)
+                    except Exception:
+                        age_text = ''
+                    self.students_table.setItem(row, 3, QTableWidgetItem(age_text))
+                    # 专业
+                    self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
+                    # 班级
+                    self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
+                    # 操作列（空）
+                    self.students_table.setItem(row, 6, QTableWidgetItem(''))
+                # 调整列宽
+                self.students_table.resizeColumnsToContents()
+        except Exception as e:
+            logger.error(f"搜索学生失败: {e}")
+            QMessageBox.critical(self, "错误", f"搜索学生失败: {str(e)}")
     
     def edit_score(self, row, score_id):
         """编辑成绩"""
@@ -404,10 +507,13 @@ class TeacherDashboard(QWidget):
             self.tab_widget.setCurrentWidget(self.profile_widget)
         elif page_name == 'courses':
             self.tab_widget.setCurrentWidget(self.courses_widget)
+            self.load_courses()
         elif page_name == 'scores':
             self.tab_widget.setCurrentWidget(self.scores_widget)
+            self.query_scores()
         elif page_name == 'students':
             self.tab_widget.setCurrentWidget(self.students_widget)
+            self.load_students()  # 切换到学生管理标签页时加载学生数据
         elif page_name == 'analysis':
             self.tab_widget.setCurrentWidget(self.analysis_widget)
     
