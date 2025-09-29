@@ -130,6 +130,20 @@ class DatabaseManager:
                     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
                 )
             ''')
+
+            # 创建选课表（用于表示学生选了哪些课程，不依赖成绩）
+            temp_cursor.execute('''
+                CREATE TABLE IF NOT EXISTS enrollments (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    student_id INT NOT NULL,
+                    course_id INT NOT NULL,
+                    semester VARCHAR(20),
+                    enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY unique_enrollment (student_id, course_id, semester),
+                    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+                )
+            ''')
             
             # 插入管理员用户
             temp_cursor.execute('''
@@ -165,6 +179,23 @@ class DatabaseManager:
                         self.cursor.execute("ALTER TABLE courses ADD COLUMN class_time VARCHAR(100)")
                 except Exception as inner_e:
                     logger.warning(f"添加课程表上课时间字段失败: {inner_e}")
+
+            # 确保存在选课表 enrollments
+            try:
+                self.cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS enrollments (
+                        id INT PRIMARY KEY AUTO_INCREMENT,
+                        student_id INT NOT NULL,
+                        course_id INT NOT NULL,
+                        semester VARCHAR(20),
+                        enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY unique_enrollment (student_id, course_id, semester),
+                        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+                    )
+                ''')
+            except Exception as e:
+                logger.warning(f"创建选课表失败: {e}")
         except Exception as e:
             # 如果目标版本较低不支持 IF NOT EXISTS，则检查字段是否存在再添加
             try:
@@ -178,6 +209,22 @@ class DatabaseManager:
                 col = self.cursor.fetchone()
                 if not col:
                     self.cursor.execute("ALTER TABLE courses ADD COLUMN class_time VARCHAR(100)")
+                # 检查选课表是否存在，不存在则创建
+                self.cursor.execute("SHOW TABLES LIKE 'enrollments'")
+                tbl = self.cursor.fetchone()
+                if not tbl:
+                    self.cursor.execute('''
+                        CREATE TABLE enrollments (
+                            id INT PRIMARY KEY AUTO_INCREMENT,
+                            student_id INT NOT NULL,
+                            course_id INT NOT NULL,
+                            semester VARCHAR(20),
+                            enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE KEY unique_enrollment (student_id, course_id, semester),
+                            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+                        )
+                    ''')
             except Exception as inner_e:
                 logger.warning(f"迁移检查失败: {inner_e}")
     

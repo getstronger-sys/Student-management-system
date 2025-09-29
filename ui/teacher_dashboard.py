@@ -335,7 +335,7 @@ class TeacherDashboard(QWidget):
             
             if response.get('success'):
                 scores = response.get('scores', [])
-                stats = response.get('stats', {})
+                stats = response.get('statistics', {})
                 
                 # 清空表格
                 self.scores_table.setRowCount(0)
@@ -380,107 +380,133 @@ class TeacherDashboard(QWidget):
     def load_students(self):
         """加载学生数据"""
         try:
-            # 获取所有学生数据
-            response = client.get_all_students_admin()
-            if response.get('success'):
-                students = response.get('students', [])
-                # 清空表格
-                self.students_table.setRowCount(0)
-                # 添加学生数据到表格
-                for s in students:
-                    row = self.students_table.rowCount()
-                    self.students_table.insertRow(row)
-                    
-                    # 根据表头顺序设置数据
-                    # 学生ID
-                    self.students_table.setItem(row, 0, QTableWidgetItem(s.get('student_id', '')))
-                    # 姓名
-                    self.students_table.setItem(row, 1, QTableWidgetItem(s.get('name', '')))
-                    # 性别
-                    self.students_table.setItem(row, 2, QTableWidgetItem(s.get('gender', '')))
-                    # 年龄（根据出生日期计算）
-                    age_text = ''
-                    try:
-                        birth_val = s.get('birth')
-                        if birth_val:
-                            from datetime import datetime, date
-                            if isinstance(birth_val, str):
-                                birth_date = datetime.strptime(birth_val, '%Y-%m-%d').date()
-                            elif isinstance(birth_val, date):
-                                birth_date = birth_val
-                            else:
-                                birth_date = None
-                            if birth_date:
-                                today = date.today()
-                                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-                                age_text = str(age)
-                    except Exception:
+            # 获取当前教师的课程列表
+            courses_response = client.get_my_courses()
+            if courses_response.get('success') and courses_response.get('courses'):
+                # 教师通常会有多个课程，但为了简化，我们只显示第一个课程的学生
+                # 实际应用中可能需要让教师选择要查看哪个课程的学生
+                first_course = courses_response.get('courses')[0]
+                course_id = first_course.get('id')
+                
+                # 获取该课程的学生列表
+                response = client.get_course_students(course_id)
+                if response.get('success'):
+                    students = response.get('students', [])
+                    # 清空表格
+                    self.students_table.setRowCount(0)
+                    # 添加学生数据到表格
+                    for s in students:
+                        row = self.students_table.rowCount()
+                        self.students_table.insertRow(row)
+                        
+                        # 根据表头顺序设置数据
+                        # 学生ID
+                        self.students_table.setItem(row, 0, QTableWidgetItem(s.get('student_id', '')))
+                        # 姓名
+                        self.students_table.setItem(row, 1, QTableWidgetItem(s.get('name', '')))
+                        # 性别
+                        self.students_table.setItem(row, 2, QTableWidgetItem(s.get('gender', '')))
+                        # 年龄（根据出生日期计算）
                         age_text = ''
-                    self.students_table.setItem(row, 3, QTableWidgetItem(age_text))
-                    # 专业
-                    self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
-                    # 班级
-                    self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
-                    # 操作列（空）
-                    self.students_table.setItem(row, 6, QTableWidgetItem(''))
-                # 调整列宽
-                self.students_table.resizeColumnsToContents()
+                        try:
+                            birth_val = s.get('birth')
+                            if birth_val:
+                                from datetime import datetime, date
+                                if isinstance(birth_val, str):
+                                    birth_date = datetime.strptime(birth_val, '%Y-%m-%d').date()
+                                elif isinstance(birth_val, date):
+                                    birth_date = birth_val
+                                else:
+                                    birth_date = None
+                                if birth_date:
+                                    today = date.today()
+                                    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                                    age_text = str(age)
+                        except Exception:
+                            age_text = ''
+                        self.students_table.setItem(row, 3, QTableWidgetItem(age_text))
+                        # 专业
+                        self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
+                        # 班级
+                        self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
+                        # 操作列（空）
+                        self.students_table.setItem(row, 6, QTableWidgetItem(''))
+                    # 调整列宽
+                    self.students_table.resizeColumnsToContents()
         except Exception as e:
             logger.error(f"加载学生数据失败: {e}")
             QMessageBox.warning(self, "加载失败", f"加载学生数据失败: {str(e)}")
 
     def search_students(self):
         """搜索学生"""
-        keyword = self.students_search_edit.text().strip()
+        keyword = self.search_edit.text().strip()
         if not keyword:
             self.load_students()
             return
         try:
-            # 根据关键词搜索学生
-            response = client.search_students_admin(keyword)
-            if response.get('success'):
-                students = response.get('students', [])
-                # 清空表格
-                self.students_table.setRowCount(0)
-                # 添加搜索到的学生数据到表格
-                for s in students:
-                    row = self.students_table.rowCount()
-                    self.students_table.insertRow(row)
+            # 获取当前教师的课程列表
+            courses_response = client.get_my_courses()
+            if courses_response.get('success') and courses_response.get('courses'):
+                # 教师通常会有多个课程，但为了简化，我们只使用第一个课程
+                first_course = courses_response.get('courses')[0]
+                course_id = first_course.get('id')
+                
+                # 获取该课程的学生列表
+                response = client.get_course_students(course_id)
+                if response.get('success'):
+                    students = response.get('students', [])
                     
-                    # 根据表头顺序设置数据
-                    # 学生ID
-                    self.students_table.setItem(row, 0, QTableWidgetItem(s.get('student_id', '')))
-                    # 姓名
-                    self.students_table.setItem(row, 1, QTableWidgetItem(s.get('name', '')))
-                    # 性别
-                    self.students_table.setItem(row, 2, QTableWidgetItem(s.get('gender', '')))
-                    # 年龄（根据出生日期计算）
-                    age_text = ''
-                    try:
-                        birth_val = s.get('birth')
-                        if birth_val:
-                            from datetime import datetime, date
-                            if isinstance(birth_val, str):
-                                birth_date = datetime.strptime(birth_val, '%Y-%m-%d').date()
-                            elif isinstance(birth_val, date):
-                                birth_date = birth_val
-                            else:
-                                birth_date = None
-                            if birth_date:
-                                today = date.today()
-                                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-                                age_text = str(age)
-                    except Exception:
+                    # 筛选包含关键词的学生
+                    filtered_students = []
+                    keyword = keyword.lower()
+                    for s in students:
+                        # 检查学生ID或姓名是否包含关键词
+                        student_id = str(s.get('student_id', '')).lower()
+                        student_name = str(s.get('name', '')).lower()
+                        if keyword in student_id or keyword in student_name:
+                            filtered_students.append(s)
+                    
+                    # 清空表格
+                    self.students_table.setRowCount(0)
+                    # 添加筛选后的学生数据到表格
+                    for s in filtered_students:
+                        row = self.students_table.rowCount()
+                        self.students_table.insertRow(row)
+                        
+                        # 根据表头顺序设置数据
+                        # 学生ID
+                        self.students_table.setItem(row, 0, QTableWidgetItem(s.get('student_id', '')))
+                        # 姓名
+                        self.students_table.setItem(row, 1, QTableWidgetItem(s.get('name', '')))
+                        # 性别
+                        self.students_table.setItem(row, 2, QTableWidgetItem(s.get('gender', '')))
+                        # 年龄（根据出生日期计算）
                         age_text = ''
-                    self.students_table.setItem(row, 3, QTableWidgetItem(age_text))
-                    # 专业
-                    self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
-                    # 班级
-                    self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
-                    # 操作列（空）
-                    self.students_table.setItem(row, 6, QTableWidgetItem(''))
-                # 调整列宽
-                self.students_table.resizeColumnsToContents()
+                        try:
+                            birth_val = s.get('birth')
+                            if birth_val:
+                                from datetime import datetime, date
+                                if isinstance(birth_val, str):
+                                    birth_date = datetime.strptime(birth_val, '%Y-%m-%d').date()
+                                elif isinstance(birth_val, date):
+                                    birth_date = birth_val
+                                else:
+                                    birth_date = None
+                                if birth_date:
+                                    today = date.today()
+                                    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                                    age_text = str(age)
+                        except Exception:
+                            age_text = ''
+                        self.students_table.setItem(row, 3, QTableWidgetItem(age_text))
+                        # 专业
+                        self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
+                        # 班级
+                        self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
+                        # 操作列（空）
+                        self.students_table.setItem(row, 6, QTableWidgetItem(''))
+                    # 调整列宽
+                    self.students_table.resizeColumnsToContents()
         except Exception as e:
             logger.error(f"搜索学生失败: {e}")
             QMessageBox.critical(self, "错误", f"搜索学生失败: {str(e)}")

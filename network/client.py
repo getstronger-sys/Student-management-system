@@ -178,6 +178,11 @@ class Client:
         """获取指定课程和学期的成绩"""
         return self.send_request('get_course_scores', {'course_id': course_id, 'semester': semester})
     
+    # 快捷方法：获取课程学生列表（教师）
+    def get_course_students(self, course_id):
+        """获取指定课程的学生列表"""
+        return self.send_request('get_course_students', {'course_id': course_id})
+    
     # 快捷方法：获取所有用户（管理员）
     def get_all_users(self):
         """获取所有用户信息（管理员）"""

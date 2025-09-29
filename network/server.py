@@ -13,6 +13,7 @@ from models.student import Student
 from models.teacher import Teacher
 from models.courses import Course
 from models.scores import Score
+from models.enrollment import Enrollment
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -383,12 +384,25 @@ class Server:
                 return {'success': True, 'courses': courses}
             return {'success': False, 'message': '获取课程失败'}
         
+        elif action == 'get_course_students' and current_user['role'] == 'teacher':
+            course_id = params.get('course_id')
+            # 确保该课程属于当前教师
+            course = Course.get_course_by_id(course_id)
+            if not course:
+                return {'success': False, 'message': '课程不存在'}
+            teacher = Teacher.get_teacher_by_user_id(current_user['id'])
+            if not teacher or course.get('teacher_id') != teacher['id']:
+                return {'success': False, 'message': '权限不足，您不是该课程的教师'}
+            # 基于选课关系获取该课程的学生列表（不依赖是否已有成绩）
+            students = Enrollment.get_students_by_course(course_id)
+            return {'success': True, 'students': students or []}
+        
         elif action == 'get_course_scores' and current_user['role'] == 'teacher':
             course_id = params.get('course_id')
             semester = params.get('semester')
             scores = Score.get_scores_by_course_and_semester(course_id, semester)
             stats = Score.get_score_statistics(course_id, semester)
-            return {'success': True, 'scores': scores, 'stats': stats}
+            return {'success': True, 'scores': scores, 'statistics': stats}
             
         # 新增：课程管理（管理员权限）
         elif action == 'get_all_courses' and current_user['role'] == 'admin':

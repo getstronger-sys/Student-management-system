@@ -7,6 +7,7 @@ from database.db_manager import db_manager
 import logging
 import numpy as np
 from datetime import datetime
+from .enrollment import Enrollment
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -37,6 +38,11 @@ class Score:
             result = db_manager.execute_update(query, (student_id, course_id, score, semester, exam_time))
             
             if result > 0:
+                # 确保存在选课记录，以便学生管理界面展示
+                try:
+                    Enrollment.enroll(student_id, course_id, semester)
+                except Exception:
+                    pass
                 logger.info(f"成绩添加成功")
                 return True
             else:

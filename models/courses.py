@@ -5,6 +5,7 @@
 
 from database.db_manager import db_manager
 import logging
+from .enrollment import Enrollment
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -141,22 +142,34 @@ class Course:
             return None
     
     @staticmethod
+    def get_course_by_id(course_id):
+        """根据课程ID获取课程信息"""
+        try:
+            query = "SELECT * FROM courses WHERE id = %s"
+            result = db_manager.execute_query(query, (course_id,))
+            if result and len(result) > 0:
+                return result[0]
+            else:
+                logger.warning(f"课程ID {course_id} 不存在")
+                return None
+        except Exception as e:
+            logger.error(f"根据ID获取课程信息失败: {e}")
+            return None
+
+    @staticmethod
     def get_courses_by_teacher_id(teacher_id):
         """根据教师ID获取教授的课程"""
         try:
             query = "SELECT * FROM courses WHERE teacher_id = %s"
             result = db_manager.execute_query(query, (teacher_id,))
             
-            # 为每个课程计算学生人数
+            # 为每个课程计算学生人数（基于选课表统计）
             if result:
                 for course in result:
-                    # 查询scores表，统计该课程的学生人数
-                    count_query = "SELECT COUNT(DISTINCT student_id) AS student_count FROM scores WHERE course_id = %s"
-                    count_result = db_manager.execute_query(count_query, (course['id'],))
-                    
-                    if count_result and len(count_result) > 0:
-                        course['student_count'] = count_result[0]['student_count']
-                    else:
+                    try:
+                        course['student_count'] = Enrollment.count_students_by_course(course['id'])
+                    except Exception:
+                        # 回退：若统计失败，置0
                         course['student_count'] = 0
             
             return result
