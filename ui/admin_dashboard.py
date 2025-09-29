@@ -289,8 +289,8 @@ class AdminDashboard(QWidget):
         
         # 创建课程表格
         self.courses_table = QTableWidget()
-        self.courses_table.setColumnCount(8)
-        self.courses_table.setHorizontalHeaderLabels(["课程ID", "课程代码", "课程名称", "学分", "教师", "学期", "上课时间", "操作"])
+        self.courses_table.setColumnCount(9)
+        self.courses_table.setHorizontalHeaderLabels(["课程ID", "课程代码", "课程名称", "学分", "教师", "学期", "上课时间", "上课地点", "操作"])
         
         # 设置表格样式
         self.courses_table.horizontalHeader().setStretchLastSection(True)
@@ -715,8 +715,10 @@ class AdminDashboard(QWidget):
                     teacher_name = f"ID: {teacher_id}" if teacher_id else '未知'
                     self.courses_table.setItem(row_position, 4, QTableWidgetItem(teacher_name))
                     self.courses_table.setItem(row_position, 5, QTableWidgetItem(course.get('semester', '')))
-                    # 服务器返回的数据中没有class_time字段，设置为空字符串
-                    self.courses_table.setItem(row_position, 6, QTableWidgetItem(''))
+                    # 显示上课时间
+                    self.courses_table.setItem(row_position, 6, QTableWidgetItem(course.get('class_time', '')))
+                    # 显示上课地点
+                    self.courses_table.setItem(row_position, 7, QTableWidgetItem(course.get('class_room', '')))
                     
                     # 创建操作按钮
                     action_widget = QWidget()
@@ -736,7 +738,7 @@ class AdminDashboard(QWidget):
                     delete_button.clicked.connect(lambda checked, course_id=course.get('id'): self.delete_course(course_id))
                     action_layout.addWidget(delete_button)
                     
-                    self.courses_table.setCellWidget(row_position, 7, action_widget)
+                    self.courses_table.setCellWidget(row_position, 8, action_widget)
                 
                 # 调整表格列宽
                 self.courses_table.resizeColumnsToContents()
@@ -768,6 +770,8 @@ class AdminDashboard(QWidget):
                     self.courses_table.setItem(row_position, 4, QTableWidgetItem(course.get('teacher_name', '未知')))
                     self.courses_table.setItem(row_position, 5, QTableWidgetItem(course.get('semester', '')))
                     self.courses_table.setItem(row_position, 6, QTableWidgetItem(course.get('class_time', '')))
+                    # 显示上课地点
+                    self.courses_table.setItem(row_position, 7, QTableWidgetItem(course.get('class_room', '')))
                     action_widget = QWidget()
                     action_layout = QHBoxLayout(action_widget)
                     action_layout.setContentsMargins(0, 0, 0, 0)
@@ -780,7 +784,7 @@ class AdminDashboard(QWidget):
                     delete_button.setStyleSheet("color: red;")
                     delete_button.clicked.connect(lambda checked, course_id=course.get('id'): self.delete_course(course_id))
                     action_layout.addWidget(delete_button)
-                    self.courses_table.setCellWidget(row_position, 7, action_widget)
+                    self.courses_table.setCellWidget(row_position, 8, action_widget)
                 self.courses_table.resizeColumnsToContents()
             else:
                 QMessageBox.warning(self, "搜索失败", response.get('message', '搜索课程失败'))
@@ -1437,8 +1441,13 @@ class EditCourseDialog(QDialog):
 
         # 上课时间
         self.time_edit = QLineEdit()
-        self.time_edit.setPlaceholderText("如：周一1-2节")
+        self.time_edit.setPlaceholderText("如：周一 10:00-11:40")
         form_layout.addRow("上课时间:", self.time_edit)
+
+        # 上课地点
+        self.location_edit = QLineEdit()
+        self.location_edit.setPlaceholderText("如：教101")
+        form_layout.addRow("上课地点:", self.location_edit)
 
         # 添加表单到主布局
         layout.addLayout(form_layout)
@@ -1465,6 +1474,7 @@ class EditCourseDialog(QDialog):
             self.teacher_id_edit.setText(str(self.course_data.get('teacher_id', '')))
             self.semester_edit.setText(self.course_data.get('semester', ''))
             self.time_edit.setText(self.course_data.get('class_time', ''))
+            self.location_edit.setText(self.course_data.get('class_location', self.course_data.get('class_room', '')))
 
     def accept(self):
         # 获取表单数据
@@ -1474,6 +1484,7 @@ class EditCourseDialog(QDialog):
         teacher_id = self.teacher_id_edit.text().strip()
         semester = self.semester_edit.text().strip()
         time = self.time_edit.text().strip()
+        location = self.location_edit.text().strip()
 
         # 验证表单
         if not code:
@@ -1491,6 +1502,7 @@ class EditCourseDialog(QDialog):
 
         try:
             # 调用客户端更新课程
+            # 注意：update_course_admin方法要求所有参数都是必需的，所以必须传递所有参数
             result = client.update_course_admin(
                 course_id=self.course_id,
                 code=code,
@@ -1498,7 +1510,8 @@ class EditCourseDialog(QDialog):
                 credit=credit,
                 teacher_id=int(teacher_id),
                 semester=semester,
-                time=time
+                time=time,
+                location=location  # 即使为空也必须传递
             )
             if result.get('success'):
                 QMessageBox.information(self, "成功", "课程更新成功")
@@ -1553,8 +1566,13 @@ class AddCourseDialog(QDialog):
 
         # 上课时间
         self.time_edit = QLineEdit()
-        self.time_edit.setPlaceholderText("如：周一1-2节")
+        self.time_edit.setPlaceholderText("如：周一 10:00-11:40")
         form_layout.addRow("上课时间:", self.time_edit)
+
+        # 上课地点
+        self.location_edit = QLineEdit()
+        self.location_edit.setPlaceholderText("如：教101")
+        form_layout.addRow("上课地点:", self.location_edit)
 
         # 添加表单到主布局
         layout.addLayout(form_layout)
@@ -1581,6 +1599,7 @@ class AddCourseDialog(QDialog):
         teacher_id = self.teacher_id_edit.text().strip()
         semester = self.semester_edit.text().strip()
         time = self.time_edit.text().strip()
+        location = self.location_edit.text().strip()
 
         # 验证表单
         if not code:
@@ -1604,7 +1623,8 @@ class AddCourseDialog(QDialog):
                 credit=credit,
                 teacher_id=int(teacher_id),
                 semester=semester,
-                time=time
+                time=time,
+                location=location
             )
             if result.get('success'):
                 QMessageBox.information(self, "成功", "课程添加成功")
@@ -1613,29 +1633,6 @@ class AddCourseDialog(QDialog):
                 super().accept()
             else:
                 QMessageBox.warning(self, "失败", result.get('message', '添加失败'))
-        except Exception as e:
-            QMessageBox.critical(self, "错误", f"添加课程失败：{str(e)}")
-        if not semester:
-            QMessageBox.warning(self, "警告", "请输入学期")
-            return
-
-        try:
-            # 调用客户端添加课程
-            result = self.courses_tab.client.add_course_admin(
-                code=code,
-                name=name,
-                credit=credit,
-                teacher_id=int(teacher_id),
-                semester=semester,
-                time=time
-            )
-            if result["status"] == "success":
-                QMessageBox.information(self, "成功", "课程添加成功")
-                # 刷新课程列表
-                self.courses_tab.load_courses()
-                super().accept()
-            else:
-                QMessageBox.warning(self, "失败", result["message"])
         except Exception as e:
             QMessageBox.critical(self, "错误", f"添加课程失败：{str(e)}")
 

@@ -127,6 +127,8 @@ def init_database():
                 credits FLOAT NOT NULL,
                 teacher_id INT,
                 semester VARCHAR(20),
+                class_time VARCHAR(100),
+                class_location VARCHAR(100),
                 FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
             )
         ''')
@@ -312,22 +314,22 @@ def init_database():
         
         # 插入课程
         courses = [
-            ('CS101', 'Python程序设计', 3.0, teacher1_id, '2025-2026-1'),
-            ('CS102', '数据结构', 4.0, teacher1_id, '2025-2026-1'),
-            ('CS201', '计算机网络', 3.0, teacher2_id, '2025-2026-1'),
-            ('CS202', '操作系统', 4.0, teacher3_id, '2025-2026-1'),
-            ('CS203', '数据库原理', 3.5, teacher2_id, '2025-2026-1'),
-            ('CS301', '软件工程', 3.0, teacher4_id, '2025-2026-2'),
-            ('CS302', '人工智能', 4.0, teacher5_id, '2025-2026-2'),
-            ('CS303', '编译原理', 4.0, teacher3_id, '2025-2026-2'),
-            ('MA101', '高等数学', 5.0, teacher3_id, '2025-2026-1'),
-            ('MA201', '线性代数', 3.0, teacher3_id, '2025-2026-2'),
-            ('PH101', '大学物理', 4.0, teacher4_id, '2025-2026-1'),
-            ('EN101', '大学英语', 3.0, teacher6_id, '2025-2026-1')
+            ('CS101', 'Python程序设计', 3.0, teacher1_id, '2025-2026-1', '周一 10:00-11:40', '教101'),
+            ('CS102', '数据结构', 4.0, teacher1_id, '2025-2026-1', '周三 14:00-15:40', '教102'),
+            ('CS201', '计算机网络', 3.0, teacher2_id, '2025-2026-1', '周二 08:00-09:40', '教103'),
+            ('CS202', '操作系统', 4.0, teacher3_id, '2025-2026-1', '周四 10:00-11:40', '教201'),
+            ('CS203', '数据库原理', 3.5, teacher2_id, '2025-2026-1', '周五 14:00-15:40', '教202'),
+            ('CS301', '软件工程', 3.0, teacher4_id, '2025-2026-2', '周一 14:00-15:40', '教203'),
+            ('CS302', '人工智能', 4.0, teacher5_id, '2025-2026-2', '周二 10:00-11:40', '教301'),
+            ('CS303', '编译原理', 4.0, teacher3_id, '2025-2026-2', '周三 08:00-09:40', '教302'),
+            ('MA101', '高等数学', 5.0, teacher3_id, '2025-2026-1', '周四 14:00-15:40', '教303'),
+            ('MA201', '线性代数', 3.0, teacher3_id, '2025-2026-2', '周五 08:00-09:40', '教401'),
+            ('PH101', '大学物理', 4.0, teacher4_id, '2025-2026-1', '周一 08:00-09:40', '教402'),
+            ('EN101', '大学英语', 3.0, teacher6_id, '2025-2026-1', '周三 14:00-15:40', '教403')
         ]
         for course in courses:
             cursor.execute(
-                'INSERT INTO courses (course_code, course_name, credits, teacher_id, semester) VALUES (%s, %s, %s, %s, %s)',
+                'INSERT INTO courses (course_code, course_name, credits, teacher_id, semester, class_time, class_location) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                 course
             )
         

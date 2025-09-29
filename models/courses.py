@@ -16,7 +16,7 @@ class Course:
     """课程类，封装课程相关的业务逻辑"""
     
     @staticmethod
-    def add_course(course_code, course_name, credits, teacher_id, semester, time=None):
+    def add_course(course_code, course_name, credits, teacher_id, semester, time=None, location=None):
         """添加课程信息"""
         try:
             # 检查课程代码是否已存在
@@ -37,8 +37,8 @@ class Course:
                     return False
             
             # 插入课程信息
-            query = "INSERT INTO courses (course_code, course_name, credits, teacher_id, semester) VALUES (%s, %s, %s, %s, %s)"
-            result = db_manager.execute_update(query, (course_code, course_name, credits, teacher_id, semester))
+            query = "INSERT INTO courses (course_code, course_name, credits, teacher_id, semester, class_time, class_location) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            result = db_manager.execute_update(query, (course_code, course_name, credits, teacher_id, semester, time, location))
             
             if result > 0:
                 logger.info(f"课程 {course_name} (代码: {course_code}) 添加成功")
@@ -51,7 +51,7 @@ class Course:
             return False
     
     @staticmethod
-    def update_course(course_id, code, name, credit, teacher_id, semester, time):
+    def update_course(course_id, code, name, credit, teacher_id, semester, time, location=None):
         """更新课程信息"""
         try:
             # 构建更新语句
@@ -91,6 +91,22 @@ class Course:
                 except Exception as e:
                     logger.error(f"检查课程时间字段失败: {e}")
             
+            # 处理上课地点更新
+            if location:
+                # 检查数据库中是否存在class_location字段
+                try:
+                    # 先检查字段是否存在
+                    check_field_query = "SHOW COLUMNS FROM courses LIKE 'class_location'"
+                    field_exists = db_manager.execute_query(check_field_query)
+                    
+                    if field_exists:
+                        updates.append("class_location = %s")
+                        params.append(location)
+                    else:
+                        logger.warning("尝试更新课程地点，但数据库中没有相应字段。如需添加上课地点功能，请先修改数据库结构。")
+                except Exception as e:
+                    logger.error(f"检查课程地点字段失败: {e}")
+            
             # 验证teacher_id是否存在（如果提供了非空值）
             if teacher_id is not None:
                 # 检查教师ID是否存在
@@ -115,8 +131,13 @@ class Course:
             query = f"UPDATE courses SET {', '.join(updates)} WHERE id = %s"
             result = db_manager.execute_update(query, tuple(params))
             
-            if result > 0:
-                logger.info(f"课程 (ID: {course_id}) 信息更新成功")
+            # 只要执行成功（无论是否有行被更新），就认为更新成功
+            # execute_update在执行失败时会返回0或抛出异常
+            if result is not None and result >= 0:
+                if result > 0:
+                    logger.info(f"课程 (ID: {course_id}) 信息更新成功")
+                else:
+                    logger.info(f"课程 (ID: {course_id}) 信息已是最新，无需更新")
                 return True
             else:
                 logger.warning(f"课程 (ID: {course_id}) 信息更新失败")

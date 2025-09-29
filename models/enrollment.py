@@ -80,4 +80,27 @@ class Enrollment:
             logger.error(f"统计课程学生数失败: {e}")
             return 0
 
+    @staticmethod
+    def get_courses_by_student(student_internal_id, semester=None):
+        """根据学生获取已选课程信息（返回 courses 表记录）"""
+        try:
+            if semester:
+                query = (
+                    "SELECT c.* FROM enrollments e "
+                    "JOIN courses c ON e.course_id = c.id "
+                    "WHERE e.student_id = %s AND e.semester = %s"
+                )
+                params = (student_internal_id, semester)
+            else:
+                query = (
+                    "SELECT c.* FROM enrollments e "
+                    "JOIN courses c ON e.course_id = c.id "
+                    "WHERE e.student_id = %s"
+                )
+                params = (student_internal_id,)
+            return db_manager.execute_query(query, params)
+        except Exception as e:
+            logger.error(f"获取学生课程失败: {e}")
+            return None
+
 

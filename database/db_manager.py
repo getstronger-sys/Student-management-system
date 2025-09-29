@@ -112,6 +112,8 @@ class DatabaseManager:
                     credits FLOAT NOT NULL,
                     teacher_id INT,
                     semester VARCHAR(20),
+                    class_time VARCHAR(100),
+                    class_location VARCHAR(100),
                     FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
                 )
             ''')
@@ -179,6 +181,18 @@ class DatabaseManager:
                         self.cursor.execute("ALTER TABLE courses ADD COLUMN class_time VARCHAR(100)")
                 except Exception as inner_e:
                     logger.warning(f"添加课程表上课时间字段失败: {inner_e}")
+            
+            # 确保 courses 表存在 class_location 字段
+            try:
+                self.cursor.execute("ALTER TABLE courses ADD COLUMN IF NOT EXISTS class_location VARCHAR(100)")
+            except Exception:
+                try:
+                    self.cursor.execute("SHOW COLUMNS FROM courses LIKE 'class_location'")
+                    col = self.cursor.fetchone()
+                    if not col:
+                        self.cursor.execute("ALTER TABLE courses ADD COLUMN class_location VARCHAR(100)")
+                except Exception as inner_e:
+                    logger.warning(f"添加课程表上课地点字段失败: {inner_e}")
 
             # 确保存在选课表 enrollments
             try:

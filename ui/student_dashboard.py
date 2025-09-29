@@ -61,8 +61,13 @@ class DataLoadingThread(QThread):
                 result['scores'] = scores_response.get('scores', [])
                 result['gpa'] = scores_response.get('gpa', 0.0)
             
-            # 课程信息暂时从成绩中提取
-            result['courses'] = result['scores']
+            # 获取学生课程详情
+            courses_response = client.get_student_courses()
+            if courses_response.get('success'):
+                result['courses'] = courses_response.get('courses', [])
+            else:
+                # 如果获取课程详情失败，则从成绩中提取课程信息
+                result['courses'] = result['scores']
             
             # 发送数据加载完成信号
             self.data_loaded.emit(result)
@@ -224,9 +229,9 @@ class StudentDashboard(QWidget):
             self.courses_table.setItem(row_position, 1, QTableWidgetItem(course_info.get('course_name', '')))
             self.courses_table.setItem(row_position, 2, QTableWidgetItem(str(course_info.get('credits', ''))))
             self.courses_table.setItem(row_position, 3, QTableWidgetItem(course_info.get('teacher_name', '')))
-            # 这里简化处理，实际可能需要从其他地方获取
-            self.courses_table.setItem(row_position, 4, QTableWidgetItem("待定"))
-            self.courses_table.setItem(row_position, 5, QTableWidgetItem("待定"))
+            # 从课程数据中获取上课时间和地点
+            self.courses_table.setItem(row_position, 4, QTableWidgetItem(course_info.get('class_time', '') or "待定"))
+            self.courses_table.setItem(row_position, 5, QTableWidgetItem(course_info.get('class_room', '') or "待定"))
         
         # 调整表格列宽
         self.courses_table.resizeColumnsToContents()
@@ -596,7 +601,7 @@ class EditSelfStudentDialog(QDialog):
                 'name': name,
                 'gender': gender,
                 'birth': birth_str,
-                'class_name': class_name,
+                'class': class_name,
                 'major': major
             }
             resp = client.update_student_info(**payload)

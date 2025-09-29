@@ -86,6 +86,22 @@ class Teacher:
     
     @staticmethod
     def get_teacher_by_id(teacher_id):
+        """根据教师内部ID获取教师信息"""
+        try:
+            query = "SELECT * FROM teachers WHERE id = %s"
+            result = db_manager.execute_query(query, (teacher_id,))
+            
+            if result and len(result) > 0:
+                return result[0]
+            else:
+                logger.warning(f"教师ID {teacher_id} 不存在")
+                return None
+        except Exception as e:
+            logger.error(f"获取教师信息失败: {e}")
+            return None
+
+    @staticmethod
+    def get_teacher_by_teacher_id(teacher_id):
         """根据教师编号获取教师信息"""
         try:
             query = "SELECT * FROM teachers WHERE teacher_id = %s"

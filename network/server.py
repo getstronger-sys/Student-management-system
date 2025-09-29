@@ -373,14 +373,52 @@ class Server:
             if student:
                 scores = Score.get_scores_by_student_id(student['id'])
                 gpa = Score.calculate_gpa(student['id'])
+                # 为每个成绩添加教师信息
+                if scores:
+                    for score in scores:
+                        if score.get('course_id'):
+                            course_info = Course.get_course_by_id(score['course_id'])
+                            if course_info and course_info.get('teacher_id'):
+                                teacher_info = Teacher.get_teacher_by_id(course_info['teacher_id'])
+                                if teacher_info:
+                                    score['teacher_name'] = teacher_info.get('name')
                 return {'success': True, 'scores': scores, 'gpa': gpa}
             return {'success': False, 'message': '获取成绩失败'}
+            
+        # 新增：获取学生课程详情
+        elif action == 'get_student_courses' and current_user['role'] == 'student':
+            student = Student.get_student_by_user_id(current_user['id'])
+            if student:
+                # 获取学生选修的课程
+                courses = Enrollment.get_courses_by_student(student['id'])
+                # 为每个课程添加教师信息并处理字段名称
+                if courses:
+                    for course in courses:
+                        if course.get('teacher_id'):
+                            teacher_info = Teacher.get_teacher_by_id(course['teacher_id'])
+                            if teacher_info:
+                                course['teacher_name'] = teacher_info.get('name')
+                        # 处理字段名称，将class_location重命名为class_room
+                        if 'class_location' in course:
+                            course['class_room'] = course.pop('class_location')
+                return {'success': True, 'courses': courses or []}
+            return {'success': False, 'message': '获取课程详情失败'}
         
         # 教师相关操作
         elif action == 'get_my_courses' and current_user['role'] == 'teacher':
             teacher = Teacher.get_teacher_by_user_id(current_user['id'])
             if teacher:
                 courses = Course.get_courses_by_teacher_id(teacher['id'])
+                # 为每个课程添加教师信息并处理字段名称
+                if courses:
+                    for course in courses:
+                        if course.get('teacher_id'):
+                            teacher_info = Teacher.get_teacher_by_id(course['teacher_id'])
+                            if teacher_info:
+                                course['teacher_name'] = teacher_info.get('name')
+                        # 处理字段名称，将class_location重命名为class_room
+                        if 'class_location' in course:
+                            course['class_room'] = course.pop('class_location')
                 return {'success': True, 'courses': courses}
             return {'success': False, 'message': '获取课程失败'}
         
@@ -407,11 +445,31 @@ class Server:
         # 新增：课程管理（管理员权限）
         elif action == 'get_all_courses' and current_user['role'] == 'admin':
             courses = Course.get_all_courses()
+            # 为每个课程添加教师信息并处理字段名称
+            if courses:
+                for course in courses:
+                    if course.get('teacher_id'):
+                        teacher = Teacher.get_teacher_by_id(course['teacher_id'])
+                        if teacher:
+                            course['teacher_name'] = teacher.get('name')
+                    # 处理字段名称，将class_location重命名为class_room
+                    if 'class_location' in course:
+                        course['class_room'] = course.pop('class_location')
             return {'success': True, 'courses': courses}
         
         elif action == 'search_courses' and current_user['role'] == 'admin':
             keyword = params.get('keyword', '')
             courses = Course.search_courses(keyword)
+            # 为每个课程添加教师信息并处理字段名称
+            if courses:
+                for course in courses:
+                    if course.get('teacher_id'):
+                        teacher = Teacher.get_teacher_by_id(course['teacher_id'])
+                        if teacher:
+                            course['teacher_name'] = teacher.get('name')
+                    # 处理字段名称，将class_location重命名为class_room
+                    if 'class_location' in course:
+                        course['class_room'] = course.pop('class_location')
             return {'success': True, 'courses': courses}
         
         elif action == 'add_course' and current_user['role'] == 'admin':
@@ -421,7 +479,8 @@ class Server:
             teacher_id = params.get('teacher_id')
             semester = params.get('semester')
             time = params.get('time')
-            success = Course.add_course(code, name, credit, teacher_id, semester, time)
+            location = params.get('location')
+            success = Course.add_course(code, name, credit, teacher_id, semester, time, location)
             return {'success': success, 'message': '添加成功' if success else '添加失败'}
             
         elif action == 'update_course' and current_user['role'] == 'admin':
@@ -432,7 +491,8 @@ class Server:
             teacher_id = params.get('teacher_id')
             semester = params.get('semester')
             time = params.get('time')
-            success = Course.update_course(course_id, code, name, credit, teacher_id, semester, time)
+            location = params.get('location')
+            success = Course.update_course(course_id, code, name, credit, teacher_id, semester, time, location)
             return {'success': success, 'message': '更新成功' if success else '更新失败'}
             
         elif action == 'delete_course' and current_user['role'] == 'admin':
