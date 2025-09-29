@@ -57,19 +57,7 @@ class Course:
             updates = []
             params = []
             
-            # 验证teacher_id是否存在（如果提供了非空值）
-            if teacher_id is not None:
-                # 检查教师ID是否存在
-                teacher_query = "SELECT id FROM teachers WHERE id = %s"
-                teacher_result = db_manager.execute_query(teacher_query, (teacher_id,))
-                
-                if not teacher_result:
-                    logger.error(f"更新课程失败: 教师ID {teacher_id} 不存在")
-                    return False
-                
-                updates.append("teacher_id = %s")
-                params.append(teacher_id)
-            
+            # 处理各个字段的更新逻辑
             if code:
                 updates.append("course_code = %s")
                 params.append(code)
@@ -86,7 +74,37 @@ class Course:
                 updates.append("semester = %s")
                 params.append(semester)
             
+            # 处理上课时间更新
+            if time:
+                # 检查数据库中是否存在class_time字段
+                try:
+                    # 先检查字段是否存在
+                    check_field_query = "SHOW COLUMNS FROM courses LIKE 'class_time'"
+                    field_exists = db_manager.execute_query(check_field_query)
+                    
+                    if field_exists:
+                        updates.append("class_time = %s")
+                        params.append(time)
+                    else:
+                        logger.warning("尝试更新课程时间，但数据库中没有相应字段。如需添加上课时间功能，请先修改数据库结构。")
+                except Exception as e:
+                    logger.error(f"检查课程时间字段失败: {e}")
+            
+            # 验证teacher_id是否存在（如果提供了非空值）
+            if teacher_id is not None:
+                # 检查教师ID是否存在
+                teacher_query = "SELECT id FROM teachers WHERE id = %s"
+                teacher_result = db_manager.execute_query(teacher_query, (teacher_id,))
+                
+                if not teacher_result:
+                    logger.error(f"更新课程失败: 教师ID {teacher_id} 不存在")
+                    return False
+                
+                updates.append("teacher_id = %s")
+                params.append(teacher_id)
+            
             if not updates:
+                logger.info(f"课程 (ID: {course_id}) 信息无更新")
                 return True
             
             # 添加course_id到参数列表

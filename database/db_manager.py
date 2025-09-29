@@ -152,6 +152,19 @@ class DatabaseManager:
         try:
             # 确保 users 表存在 email 字段（MySQL 8.0 支持 IF NOT EXISTS）
             self.cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(100)")
+            
+            # 确保 courses 表存在 class_time 字段
+            try:
+                self.cursor.execute("ALTER TABLE courses ADD COLUMN IF NOT EXISTS class_time VARCHAR(100)")
+            except Exception as e:
+                # 如果目标版本较低不支持 IF NOT EXISTS，则检查字段是否存在再添加
+                try:
+                    self.cursor.execute("SHOW COLUMNS FROM courses LIKE 'class_time'")
+                    col = self.cursor.fetchone()
+                    if not col:
+                        self.cursor.execute("ALTER TABLE courses ADD COLUMN class_time VARCHAR(100)")
+                except Exception as inner_e:
+                    logger.warning(f"添加课程表上课时间字段失败: {inner_e}")
         except Exception as e:
             # 如果目标版本较低不支持 IF NOT EXISTS，则检查字段是否存在再添加
             try:
@@ -159,6 +172,12 @@ class DatabaseManager:
                 col = self.cursor.fetchone()
                 if not col:
                     self.cursor.execute("ALTER TABLE users ADD COLUMN email VARCHAR(100)")
+                
+                # 检查并添加class_time字段
+                self.cursor.execute("SHOW COLUMNS FROM courses LIKE 'class_time'")
+                col = self.cursor.fetchone()
+                if not col:
+                    self.cursor.execute("ALTER TABLE courses ADD COLUMN class_time VARCHAR(100)")
             except Exception as inner_e:
                 logger.warning(f"迁移检查失败: {inner_e}")
     
