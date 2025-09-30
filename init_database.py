@@ -27,7 +27,8 @@ logger = logging.getLogger('init_database')
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': '123456',  # Docker数据库密码
+    #'password': '123456',  # Docker数据库密码
+    'password': 'zhyzywxj1825907',
     'database': 'student_management',
     'port': 3306
 }

@@ -310,6 +310,19 @@ class Client:
         params = kwargs
         params['user_id'] = user_id
         return self.send_request('update_user', params)
+    
+    # 学生选课相关方法
+    def get_available_courses(self, semester):
+        """获取可选课程列表（学生）"""
+        return self.send_request('get_available_courses', {'semester': semester})
+    
+    def enroll_course(self, course_id, semester):
+        """选课（学生）"""
+        return self.send_request('enroll_course', {'course_id': course_id, 'semester': semester})
+    
+    def unenroll_course(self, course_id, semester):
+        """退课（学生）"""
+        return self.send_request('unenroll_course', {'course_id': course_id, 'semester': semester})
 
 
 # 全局客户端实例

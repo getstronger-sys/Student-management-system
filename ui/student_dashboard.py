@@ -232,9 +232,22 @@ class StudentDashboard(QWidget):
             # 从课程数据中获取上课时间和地点
             self.courses_table.setItem(row_position, 4, QTableWidgetItem(course_info.get('class_time', '') or "待定"))
             self.courses_table.setItem(row_position, 5, QTableWidgetItem(course_info.get('class_room', '') or "待定"))
+            
+            # 添加退课按钮
+            drop_btn = QPushButton("退课")
+            drop_btn.setStyleSheet(
+                "QPushButton { background-color: #f44336; color: white; border-radius: 3px; padding: 3px 10px; }"
+                "QPushButton:hover { background-color: #da190b; }"
+            )
+            # 使用lambda捕获course_info
+            drop_btn.clicked.connect(lambda checked, c=course_info: self.drop_course(c))
+            self.courses_table.setCellWidget(row_position, 6, drop_btn)
         
         # 调整表格列宽
         self.courses_table.resizeColumnsToContents()
+        
+        # 同时更新课程表
+        self.update_schedule(courses)
     
     def create_profile_tab(self):
         """创建个人信息标签页"""
@@ -326,16 +339,266 @@ class StudentDashboard(QWidget):
         self.courses_widget = QWidget()
         courses_layout = QVBoxLayout(self.courses_widget)
         
+        # 添加标题和操作按钮
+        header_layout = QHBoxLayout()
+        courses_title = QLabel("我的课程")
+        title_font = QFont()
+        title_font.setPointSize(14)
+        title_font.setBold(True)
+        courses_title.setFont(title_font)
+        header_layout.addWidget(courses_title)
+        header_layout.addStretch()
+        
+        # 添加选课按钮
+        self.select_course_button = QPushButton("选课")
+        self.select_course_button.setMinimumHeight(35)
+        self.select_course_button.setStyleSheet(
+            "QPushButton { background-color: #4CAF50; color: white; border-radius: 5px; padding: 5px 15px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #45a049; }"
+        )
+        self.select_course_button.clicked.connect(self.open_course_selection_dialog)
+        header_layout.addWidget(self.select_course_button)
+        
+        courses_layout.addLayout(header_layout)
+        
+        # 创建子标签页（课程列表和课程表）
+        self.courses_tab_widget = QTabWidget()
+        
+        # 课程列表标签页
+        course_list_widget = QWidget()
+        course_list_layout = QVBoxLayout(course_list_widget)
+        
         # 创建课程表格
         self.courses_table = QTableWidget()
-        self.courses_table.setColumnCount(6)
-        self.courses_table.setHorizontalHeaderLabels(["课程代码", "课程名称", "学分", "教师", "上课时间", "上课地点"])
+        self.courses_table.setColumnCount(7)
+        self.courses_table.setHorizontalHeaderLabels(["课程代码", "课程名称", "学分", "教师", "上课时间", "上课地点", "操作"])
         
         # 设置表格样式
         self.courses_table.horizontalHeader().setStretchLastSection(True)
         
         # 添加课程表格到布局
-        courses_layout.addWidget(self.courses_table)
+        course_list_layout.addWidget(self.courses_table)
+        
+        # 课程表标签页
+        self.schedule_widget = QWidget()
+        schedule_layout = QVBoxLayout(self.schedule_widget)
+        
+        # 创建课程表
+        self.create_schedule_table()
+        schedule_layout.addWidget(self.schedule_table)
+        
+        # 添加说明文字
+        schedule_note = QLabel("💡 提示：课程表显示您已选课程的时间安排")
+        schedule_note.setStyleSheet("color: #666; padding: 5px; font-size: 12px;")
+        schedule_layout.addWidget(schedule_note)
+        
+        # 将两个子标签页添加到标签控件
+        self.courses_tab_widget.addTab(course_list_widget, "📋 课程列表")
+        self.courses_tab_widget.addTab(self.schedule_widget, "📅 课程表")
+        
+        # 添加标签控件到主布局
+        courses_layout.addWidget(self.courses_tab_widget)
+    
+    def create_schedule_table(self):
+        """创建课程表"""
+        # 定义时间段和对应的时间
+        self.time_slots = [
+            ("08:00-09:40", "第1-2节"),
+            ("10:00-11:40", "第3-4节"),
+            ("14:00-15:40", "第5-6节"),
+            ("16:00-17:40", "第7-8节"),
+            ("19:00-20:40", "第9-10节")
+        ]
+        
+        # 定义星期
+        self.weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+        
+        # 创建课程表表格
+        self.schedule_table = QTableWidget()
+        self.schedule_table.setRowCount(len(self.time_slots))
+        self.schedule_table.setColumnCount(len(self.weekdays) + 1)  # +1 for time column
+        
+        # 设置表头
+        headers = ["时间"] + self.weekdays
+        self.schedule_table.setHorizontalHeaderLabels(headers)
+        
+        # 设置时间列
+        for i, (time_range, period) in enumerate(self.time_slots):
+            time_item = QTableWidgetItem(f"{period}\n{time_range}")
+            time_item.setTextAlignment(Qt.AlignCenter)
+            time_item.setFont(QFont("Arial", 9))
+            time_item.setBackground(Qt.lightGray)
+            self.schedule_table.setItem(i, 0, time_item)
+        
+        # 设置表格属性
+        self.schedule_table.horizontalHeader().setStretchLastSection(True)
+        self.schedule_table.verticalHeader().setVisible(False)
+        self.schedule_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        
+        # 连接单元格点击事件
+        self.schedule_table.itemClicked.connect(self.on_schedule_cell_clicked)
+        
+        # 设置行高和列宽
+        for i in range(len(self.time_slots)):
+            self.schedule_table.setRowHeight(i, 80)
+        
+        self.schedule_table.setColumnWidth(0, 120)  # 时间列宽度
+        for i in range(1, len(self.weekdays) + 1):
+            self.schedule_table.setColumnWidth(i, 150)
+        
+        # 设置表格样式
+        self.schedule_table.setStyleSheet("""
+            QTableWidget {
+                gridline-color: #d0d0d0;
+                border: 1px solid #c0c0c0;
+            }
+            QTableWidget::item {
+                padding: 5px;
+                border: 1px solid #e0e0e0;
+            }
+            QTableWidget::item:hover {
+                border: 2px solid #2196F3;
+                cursor: pointer;
+            }
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                padding: 5px;
+                border: 1px solid #d0d0d0;
+                font-weight: bold;
+            }
+        """)
+    
+    def update_schedule(self, courses):
+        """更新课程表显示"""
+        # 清空所有课程单元格
+        for row in range(len(self.time_slots)):
+            for col in range(1, len(self.weekdays) + 1):
+                self.schedule_table.setItem(row, col, QTableWidgetItem(""))
+        
+        # 定义颜色列表（用于不同课程）
+        colors = [
+            "#FFE5E5", "#E5F5FF", "#E5FFE5", "#FFF5E5", "#F5E5FF",
+            "#FFE5F5", "#E5FFFF", "#FFFFE5", "#FFE5CC", "#E5E5FF"
+        ]
+        
+        # 解析并填充课程信息
+        for idx, course in enumerate(courses):
+            class_time = course.get('class_time', '')
+            if not class_time:
+                continue
+            
+            # 解析时间信息（格式：周X HH:MM-HH:MM）
+            parsed = self.parse_course_time(class_time)
+            if not parsed:
+                continue
+            
+            weekday, time_range = parsed
+            
+            # 找到对应的列
+            try:
+                col_index = self.weekdays.index(weekday) + 1
+            except ValueError:
+                continue
+            
+            # 找到对应的行
+            row_index = self.find_time_slot(time_range)
+            if row_index == -1:
+                continue
+            
+            # 创建课程单元格内容
+            course_name = course.get('course_name', '')
+            teacher_name = course.get('teacher_name', '')
+            class_location = course.get('class_room', '') or course.get('class_location', '')
+            
+            # 组合显示内容
+            display_text = f"{course_name}\n"
+            if teacher_name:
+                display_text += f"{teacher_name}\n"
+            if class_location:
+                display_text += f"{class_location}"
+            
+            # 创建单元格项
+            cell_item = QTableWidgetItem(display_text)
+            cell_item.setTextAlignment(Qt.AlignCenter)
+            
+            # 设置背景颜色
+            color_index = idx % len(colors)
+            from PyQt5.QtGui import QColor
+            cell_item.setBackground(QColor(colors[color_index]))
+            
+            # 设置字体
+            font = QFont()
+            font.setBold(True)
+            font.setPointSize(9)
+            cell_item.setFont(font)
+            
+            # 存储完整的课程信息到单元格（使用 UserRole）
+            cell_item.setData(Qt.UserRole, course)
+            
+            # 设置提示文本
+            cell_item.setToolTip(f"点击查看《{course_name}》的详细信息")
+            
+            # 设置鼠标悬停样式（通过单元格样式）
+            cell_item.setFlags(cell_item.flags() | Qt.ItemIsEnabled)
+            
+            # 设置到表格
+            self.schedule_table.setItem(row_index, col_index, cell_item)
+    
+    def parse_course_time(self, time_str):
+        """
+        解析课程时间字符串
+        输入格式: "周一 10:00-11:40"
+        返回: (weekday, time_range) 或 None
+        """
+        try:
+            if not time_str:
+                return None
+            
+            parts = time_str.strip().split()
+            if len(parts) < 2:
+                return None
+            
+            weekday = parts[0]  # 周几
+            time_range = parts[1]  # 时间段
+            
+            return (weekday, time_range)
+        except:
+            return None
+    
+    def find_time_slot(self, time_range):
+        """
+        根据时间段找到对应的行索引
+        输入格式: "10:00-11:40"
+        返回: 行索引 或 -1
+        """
+        for i, (slot_time, _) in enumerate(self.time_slots):
+            if time_range == slot_time:
+                return i
+        
+        # 如果没有完全匹配，尝试模糊匹配（检查开始时间）
+        try:
+            input_start = time_range.split('-')[0]
+            for i, (slot_time, _) in enumerate(self.time_slots):
+                slot_start = slot_time.split('-')[0]
+                if input_start == slot_start:
+                    return i
+        except:
+            pass
+        
+        return -1
+    
+    def on_schedule_cell_clicked(self, item):
+        """处理课程表单元格点击事件"""
+        # 获取存储在单元格中的课程数据
+        course_data = item.data(Qt.UserRole)
+        
+        # 如果没有课程数据（空单元格或时间列），不做处理
+        if not course_data:
+            return
+        
+        # 显示课程详情对话框
+        dialog = CourseDetailDialog(course_data, self)
+        dialog.exec_()
     
     def create_analysis_tab(self):
         """创建数据分析标签页"""
@@ -423,6 +686,47 @@ class StudentDashboard(QWidget):
     def open_change_password_dialog(self):
         dialog = ChangePasswordDialog(self)
         dialog.exec_()
+    
+    def open_course_selection_dialog(self):
+        """打开选课对话框"""
+        # 获取当前学期（这里可以根据实际情况获取，暂时使用固定学期）
+        # 从现有课程中提取学期信息，或使用默认值
+        current_semester = "2025-2026-1"  # 默认学期
+        
+        dialog = CourseSelectionDialog(current_semester, self)
+        if dialog.exec_() == QDialog.Accepted:
+            # 刷新课程列表
+            self.start_data_loading()
+    
+    def drop_course(self, course_info):
+        """退课"""
+        course_name = course_info.get('course_name', '未知课程')
+        course_id = course_info.get('id')
+        semester = course_info.get('semester')
+        
+        if not course_id or not semester:
+            QMessageBox.warning(self, "退课失败", "课程信息不完整")
+            return
+        
+        # 确认退课
+        reply = QMessageBox.question(
+            self, 
+            "确认退课", 
+            f"确定要退选《{course_name}》吗？",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            try:
+                response = client.unenroll_course(course_id, semester)
+                if response.get('success'):
+                    QMessageBox.information(self, "成功", "退课成功！")
+                    # 刷新课程列表
+                    self.start_data_loading()
+                else:
+                    QMessageBox.warning(self, "失败", response.get('message', '退课失败'))
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"退课失败: {str(e)}")
 
 
 class ScoreDistributionCanvas(FigureCanvas):
@@ -652,6 +956,223 @@ class ChangePasswordDialog(QDialog):
                 QMessageBox.warning(self, "修改失败", resp.get('message', '修改失败'))
         except Exception as e:
             QMessageBox.critical(self, "错误", f"修改失败: {str(e)}")
+
+
+class CourseDetailDialog(QDialog):
+    """课程详情对话框"""
+    def __init__(self, course_data, parent=None):
+        super().__init__(parent)
+        self.course_data = course_data
+        self.setWindowTitle("课程详细信息")
+        self.setMinimumWidth(500)
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化UI"""
+        layout = QVBoxLayout(self)
+        
+        # 创建标题
+        title_layout = QHBoxLayout()
+        title_icon = QLabel("📚")
+        title_icon.setFont(QFont("Arial", 24))
+        title_layout.addWidget(title_icon)
+        
+        title_label = QLabel(self.course_data.get('course_name', '未知课程'))
+        title_font = QFont()
+        title_font.setPointSize(16)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+        
+        layout.addLayout(title_layout)
+        
+        # 添加分隔线
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(separator)
+        
+        # 创建信息显示区域
+        info_widget = QWidget()
+        info_widget.setStyleSheet("background-color: #f9f9f9; border-radius: 5px; padding: 15px;")
+        info_layout = QVBoxLayout(info_widget)
+        
+        # 课程代码
+        course_code = self.course_data.get('course_code', '无')
+        code_label = QLabel(f"<b>课程代码：</b>{course_code}")
+        code_label.setFont(QFont("Arial", 11))
+        info_layout.addWidget(code_label)
+        
+        # 学分
+        credits = self.course_data.get('credits', '无')
+        credits_label = QLabel(f"<b>学分：</b>{credits}")
+        credits_label.setFont(QFont("Arial", 11))
+        info_layout.addWidget(credits_label)
+        
+        # 教师
+        teacher_name = self.course_data.get('teacher_name', '未指定')
+        teacher_label = QLabel(f"<b>授课教师：</b>{teacher_name}")
+        teacher_label.setFont(QFont("Arial", 11))
+        info_layout.addWidget(teacher_label)
+        
+        # 上课时间
+        class_time = self.course_data.get('class_time', '待定')
+        time_label = QLabel(f"<b>上课时间：</b>{class_time}")
+        time_label.setFont(QFont("Arial", 11))
+        info_layout.addWidget(time_label)
+        
+        # 上课地点
+        class_location = self.course_data.get('class_room', '') or self.course_data.get('class_location', '待定')
+        location_label = QLabel(f"<b>上课地点：</b>{class_location}")
+        location_label.setFont(QFont("Arial", 11))
+        info_layout.addWidget(location_label)
+        
+        # 学期
+        semester = self.course_data.get('semester', '未知')
+        semester_label = QLabel(f"<b>学期：</b>{semester}")
+        semester_label.setFont(QFont("Arial", 11))
+        info_layout.addWidget(semester_label)
+        
+        layout.addWidget(info_widget)
+        
+        # 添加关闭按钮
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        close_button = QPushButton("关闭")
+        close_button.setMinimumHeight(35)
+        close_button.setMinimumWidth(100)
+        close_button.setStyleSheet(
+            "QPushButton { background-color: #2196F3; color: white; border-radius: 5px; padding: 5px 15px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #1976D2; }"
+        )
+        close_button.clicked.connect(self.accept)
+        button_layout.addWidget(close_button)
+        
+        layout.addLayout(button_layout)
+
+
+class CourseSelectionDialog(QDialog):
+    """选课对话框"""
+    def __init__(self, semester, parent=None):
+        super().__init__(parent)
+        self.semester = semester
+        self.setWindowTitle(f"选课 - {semester}")
+        self.setMinimumSize(900, 600)
+        self.available_courses = []
+        self.init_ui()
+        self.load_courses()
+    
+    def init_ui(self):
+        """初始化UI"""
+        layout = QVBoxLayout(self)
+        
+        # 顶部说明
+        info_label = QLabel(f"当前学期：{self.semester}\n请从下方列表中选择课程（系统会自动检测时间冲突）")
+        info_label.setStyleSheet("color: #666; padding: 10px; background-color: #f9f9f9; border-radius: 5px;")
+        layout.addWidget(info_label)
+        
+        # 创建课程表格
+        self.courses_table = QTableWidget()
+        self.courses_table.setColumnCount(7)
+        self.courses_table.setHorizontalHeaderLabels(["课程代码", "课程名称", "学分", "教师", "上课时间", "上课地点", "操作"])
+        self.courses_table.horizontalHeader().setStretchLastSection(False)
+        self.courses_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.courses_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        layout.addWidget(self.courses_table)
+        
+        # 底部按钮
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        self.refresh_button = QPushButton("刷新")
+        self.refresh_button.clicked.connect(self.load_courses)
+        button_layout.addWidget(self.refresh_button)
+        
+        self.close_button = QPushButton("关闭")
+        self.close_button.clicked.connect(self.reject)
+        button_layout.addWidget(self.close_button)
+        
+        layout.addLayout(button_layout)
+    
+    def load_courses(self):
+        """加载可选课程"""
+        try:
+            response = client.get_available_courses(self.semester)
+            if response.get('success'):
+                self.available_courses = response.get('courses', [])
+                self.display_courses()
+            else:
+                QMessageBox.warning(self, "加载失败", response.get('message', '无法加载课程列表'))
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"加载课程失败: {str(e)}")
+    
+    def display_courses(self):
+        """显示课程列表"""
+        self.courses_table.setRowCount(0)
+        
+        if not self.available_courses:
+            QMessageBox.information(self, "提示", "当前学期没有可选课程")
+            return
+        
+        for course in self.available_courses:
+            row_position = self.courses_table.rowCount()
+            self.courses_table.insertRow(row_position)
+            
+            # 设置表格数据
+            self.courses_table.setItem(row_position, 0, QTableWidgetItem(course.get('course_code', '')))
+            self.courses_table.setItem(row_position, 1, QTableWidgetItem(course.get('course_name', '')))
+            self.courses_table.setItem(row_position, 2, QTableWidgetItem(str(course.get('credits', ''))))
+            self.courses_table.setItem(row_position, 3, QTableWidgetItem(course.get('teacher_name', '')))
+            self.courses_table.setItem(row_position, 4, QTableWidgetItem(course.get('class_time', '') or "待定"))
+            self.courses_table.setItem(row_position, 5, QTableWidgetItem(course.get('class_room', '') or "待定"))
+            
+            # 添加选课按钮
+            enroll_btn = QPushButton("选课")
+            enroll_btn.setStyleSheet(
+                "QPushButton { background-color: #4CAF50; color: white; border-radius: 3px; padding: 5px 15px; }"
+                "QPushButton:hover { background-color: #45a049; }"
+            )
+            enroll_btn.clicked.connect(lambda checked, c=course: self.enroll_course(c))
+            self.courses_table.setCellWidget(row_position, 6, enroll_btn)
+        
+        # 调整列宽
+        self.courses_table.resizeColumnsToContents()
+        self.courses_table.horizontalHeader().setStretchLastSection(True)
+    
+    def enroll_course(self, course):
+        """选课"""
+        course_name = course.get('course_name', '未知课程')
+        course_id = course.get('id')
+        
+        if not course_id:
+            QMessageBox.warning(self, "选课失败", "课程信息不完整")
+            return
+        
+        # 确认选课
+        reply = QMessageBox.question(
+            self, 
+            "确认选课", 
+            f"确定要选择《{course_name}》吗？\n\n上课时间：{course.get('class_time', '待定')}\n上课地点：{course.get('class_room', '待定')}",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            try:
+                response = client.enroll_course(course_id, self.semester)
+                if response.get('success'):
+                    QMessageBox.information(self, "成功", "选课成功！")
+                    # 重新加载课程列表
+                    self.load_courses()
+                    # 通知父窗口刷新
+                    self.accept()
+                else:
+                    # 如果是时间冲突，显示详细信息
+                    message = response.get('message', '选课失败')
+                    QMessageBox.warning(self, "选课失败", message)
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"选课失败: {str(e)}")
 
 
 # 测试代码

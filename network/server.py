@@ -500,6 +500,77 @@ class Server:
             success = Course.delete_course(course_id)
             return {'success': success, 'message': '删除成功' if success else '删除失败'}
         
+        # 学生选课相关操作
+        elif action == 'get_available_courses' and current_user['role'] == 'student':
+            # 获取当前学生的内部ID
+            student = Student.get_student_by_user_id(current_user['id'])
+            if not student:
+                return {'success': False, 'message': '未找到学生信息'}
+            
+            semester = params.get('semester')
+            if not semester:
+                return {'success': False, 'message': '请指定学期'}
+            
+            # 获取可选课程
+            available_courses = Enrollment.get_available_courses(student['id'], semester)
+            
+            # 为每个课程添加教师信息
+            if available_courses:
+                for course in available_courses:
+                    if 'class_location' in course:
+                        course['class_room'] = course.pop('class_location')
+            
+            return {'success': True, 'courses': available_courses}
+        
+        elif action == 'enroll_course' and current_user['role'] == 'student':
+            # 获取当前学生的内部ID
+            student = Student.get_student_by_user_id(current_user['id'])
+            if not student:
+                return {'success': False, 'message': '未找到学生信息'}
+            
+            course_id = params.get('course_id')
+            semester = params.get('semester')
+            
+            if not course_id or not semester:
+                return {'success': False, 'message': '缺少课程ID或学期信息'}
+            
+            # 检查是否已选
+            if Enrollment.check_already_enrolled(student['id'], course_id, semester):
+                return {'success': False, 'message': '您已选过该课程'}
+            
+            # 检查时间冲突
+            has_conflict, conflict_msg = Enrollment.check_time_conflict(student['id'], course_id, semester)
+            if has_conflict:
+                return {'success': False, 'message': conflict_msg}
+            
+            # 选课
+            success = Enrollment.enroll(student['id'], course_id, semester)
+            if success:
+                logger.info(f"学生 {student['student_id']} 成功选课: course_id={course_id}, semester={semester}")
+                return {'success': True, 'message': '选课成功'}
+            else:
+                return {'success': False, 'message': '选课失败，请稍后重试'}
+        
+        elif action == 'unenroll_course' and current_user['role'] == 'student':
+            # 获取当前学生的内部ID
+            student = Student.get_student_by_user_id(current_user['id'])
+            if not student:
+                return {'success': False, 'message': '未找到学生信息'}
+            
+            course_id = params.get('course_id')
+            semester = params.get('semester')
+            
+            if not course_id or not semester:
+                return {'success': False, 'message': '缺少课程ID或学期信息'}
+            
+            # 退课
+            success = Enrollment.unenroll(student['id'], course_id, semester)
+            if success:
+                logger.info(f"学生 {student['student_id']} 成功退课: course_id={course_id}, semester={semester}")
+                return {'success': True, 'message': '退课成功'}
+            else:
+                return {'success': False, 'message': '退课失败，请稍后重试'}
+        
         # 其他操作...
         return {'success': False, 'message': '未知操作或权限不足'}
 

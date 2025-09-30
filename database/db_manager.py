@@ -16,7 +16,8 @@ from pathlib import Path
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': '123456',  # Docker数据库密码（与docker-compose.yml一致）
+    #'password': '123456',  # Docker数据库密码（与docker-compose.yml一致）
+    'password': 'zhyzywxj1825907',
     'database': 'student_management',  # 数据库名称（与docker-compose.yml一致）
     'port': 3306,
     'charset': 'utf8mb4'
