@@ -14,12 +14,12 @@ from pathlib import Path
 
 # 数据库配置
 DB_CONFIG = {
-    'host': 'localhost',
+    'host': 'localhost',  # Docker环境下可以使用容器名称
     'user': 'root',
-    #'password': '123456',  # Docker数据库密码（与docker-compose.yml一致）
-    'password': 'zhyzywxj1825907',
+    'password': '123456',  # Docker数据库密码（与docker-compose.yml一致）
+    #'password': 'zhyzywxj1825907',  # 本地数据库密码（已注释）
     'database': 'student_management',  # 数据库名称（与docker-compose.yml一致）
-    'port': 3306,
+    'port': 3306,  # Docker环境下为映射到主机的端口
     'charset': 'utf8mb4'
 }
 

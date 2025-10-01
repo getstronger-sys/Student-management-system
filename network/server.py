@@ -440,7 +440,67 @@ class Server:
             semester = params.get('semester')
             scores = Score.get_scores_by_course_and_semester(course_id, semester)
             stats = Score.get_score_statistics(course_id, semester)
-            return {'success': True, 'scores': scores, 'statistics': stats}
+            
+            # 确保每个成绩记录都有有效的id字段
+            formatted_scores = []
+            if scores:
+                for score in scores:
+                    # 确保id字段存在且有效
+                    if not score.get('id'):
+                        # 如果没有id或id无效，记录日志
+                        logger.warning(f"成绩记录缺少有效ID: {score}")
+                    formatted_scores.append(score)
+            else:
+                formatted_scores = []
+            
+            # 转换统计数据的键名以匹配客户端期望
+            formatted_stats = {
+                'avg_score': stats.get('average', 0) if stats else 0,
+                'max_score': stats.get('max', 0) if stats else 0,
+                'min_score': stats.get('min', 0) if stats else 0,
+                'pass_rate': (stats.get('pass', 0) + stats.get('medium', 0) + stats.get('good', 0) + stats.get('excellent', 0)) / stats.get('count', 1) * 100 if stats and stats.get('count', 0) > 0 else 0
+            }
+            
+            return {'success': True, 'scores': formatted_scores, 'statistics': formatted_stats}
+        
+        elif action == 'update_score' and current_user['role'] == 'teacher':
+            # 教师更新成绩
+            score_id = params.get('score_id')
+            new_score = params.get('score')
+            exam_time = params.get('exam_time')
+            if score_id is None:
+                return {'success': False, 'message': '缺少成绩ID'}
+            
+            # 确保score_id是整数类型
+            try:
+                score_id_int = int(score_id)
+            except ValueError:
+                logger.error(f"成绩ID格式错误: {score_id}")
+                return {'success': False, 'message': '成绩ID格式错误'}
+            
+            # 可选：验证该成绩属于当前教师的课程
+            try:
+                score_row = Score.get_score_by_id(score_id_int)
+                if not score_row:
+                    return {'success': False, 'message': '成绩不存在'}
+                # 验证课程归属
+                course = Course.get_course_by_id(score_row.get('course_id'))
+                teacher = Teacher.get_teacher_by_user_id(current_user['id'])
+                if not course or not teacher or course.get('teacher_id') != teacher.get('id'):
+                    return {'success': False, 'message': '权限不足，无法编辑该成绩'}
+            except Exception as e:
+                logger.error(f'验证成绩归属失败: {e}')
+                return {'success': False, 'message': '内部错误'}
+
+            # 检查分数是否为有效数字
+            try:
+                if new_score is not None:
+                    float(new_score)
+            except ValueError:
+                return {'success': False, 'message': '成绩必须是有效数字'}
+
+            success = Score.update_score_by_id(score_id_int, score=new_score, exam_time=exam_time)
+            return {'success': success, 'message': '更新成功' if success else '更新失败'}
             
         # 新增：课程管理（管理员权限）
         elif action == 'get_all_courses' and current_user['role'] == 'admin':

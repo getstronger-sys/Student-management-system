@@ -5,3 +5,5 @@ matplotlib==3.7.2
 sqlalchemy==2.0.20
 requests==2.31.0
 numpy==1.25.2
+pandas==1.5.1
+openpyxl==3.0.10

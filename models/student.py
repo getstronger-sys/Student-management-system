@@ -89,6 +89,22 @@ class Student:
             return False
     
     @staticmethod
+    def get_student_by_internal_id(internal_id):
+        """根据数据库内部ID(主键)获取学生信息"""
+        try:
+            query = "SELECT * FROM students WHERE id = %s"
+            result = db_manager.execute_query(query, (internal_id,))
+            
+            if result and len(result) > 0:
+                return result[0]
+            else:
+                logger.warning(f"内部ID {internal_id} 对应的学生不存在")
+                return None
+        except Exception as e:
+            logger.error(f"根据内部ID获取学生信息失败: {e}")
+            return None
+    
+    @staticmethod
     def get_student_by_id(student_id):
         """根据学号获取学生信息"""
         try:

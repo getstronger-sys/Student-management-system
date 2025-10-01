@@ -183,6 +183,30 @@ class Client:
         """获取指定课程的学生列表"""
         return self.send_request('get_course_students', {'course_id': course_id})
     
+    # 快捷方法：更新成绩（教师）
+    def update_score(self, score_id, score=None, exam_time=None):
+        """根据成绩ID更新成绩或考试时间（教师）"""
+        params = {'score_id': score_id}
+        if score is not None:
+            params['score'] = score
+        if exam_time is not None:
+            params['exam_time'] = exam_time
+        return self.send_request('update_score', params)
+        
+    # 新增：通过学生ID、课程ID和学期更新成绩
+    def update_score_by_student_course(self, student_id, course_id, semester, score=None, exam_time=None):
+        """根据学生ID、课程ID和学期更新成绩（教师）"""
+        params = {
+            'student_id': student_id,
+            'course_id': course_id,
+            'semester': semester
+        }
+        if score is not None:
+            params['score'] = score
+        if exam_time is not None:
+            params['exam_time'] = exam_time
+        return self.send_request('update_score_by_student_course', params)
+    
     # 快捷方法：获取所有用户（管理员）
     def get_all_users(self):
         """获取所有用户信息（管理员）"""
