@@ -373,15 +373,19 @@ class Server:
             if student:
                 scores = Score.get_scores_by_student_id(student['id'])
                 gpa = Score.calculate_gpa(student['id'])
-                # 为每个成绩添加教师信息
+                # 为每个成绩添加教师信息和课程代码
                 if scores:
                     for score in scores:
                         if score.get('course_id'):
                             course_info = Course.get_course_by_id(score['course_id'])
-                            if course_info and course_info.get('teacher_id'):
-                                teacher_info = Teacher.get_teacher_by_id(course_info['teacher_id'])
-                                if teacher_info:
-                                    score['teacher_name'] = teacher_info.get('name')
+                            if course_info:
+                                # 添加课程代码
+                                score['course_code'] = course_info.get('course_code', '')
+                                # 添加教师信息
+                                if course_info.get('teacher_id'):
+                                    teacher_info = Teacher.get_teacher_by_id(course_info['teacher_id'])
+                                    if teacher_info:
+                                        score['teacher_name'] = teacher_info.get('name')
                 return {'success': True, 'scores': scores, 'gpa': gpa}
             return {'success': False, 'message': '获取成绩失败'}
             

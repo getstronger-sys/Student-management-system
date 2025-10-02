@@ -166,7 +166,7 @@ class Score:
         """根据学生ID获取成绩信息"""
         try:
             query = """
-                SELECT s.*, c.course_name, c.credits 
+                SELECT s.*, c.course_name, c.course_code, c.credits 
                 FROM scores s 
                 JOIN courses c ON s.course_id = c.id 
                 WHERE s.student_id = %s
