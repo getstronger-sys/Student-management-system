@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理系统 - 管理员仪表盘</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- 引入Chart.js用于数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 顶部导航栏 -->
+            <header class="top-nav">
+                <div class="nav-title">
+                    <h1>管理员仪表盘</h1>
+                </div>
+                <div class="nav-actions">
+                    <button id="refresh-btn" class="action-btn">
+                        <i class="icon">🔄</i>
+                        <span>刷新</span>
+                    </button>
+                    <button id="backup-btn" class="action-btn">
+                        <i class="icon">💾</i>
+                        <span>备份</span>
+                    </button>
+                    <button id="logout-btn" class="action-btn danger">
+                        <i class="icon">🚪</i>
+                        <span>退出登录</span>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- 标签页导航 -->
+            <div class="tab-bar">
+                <button class="tab-button active" data-tab="admin-dashboard">
+                    <i class="icon">📊</i>
+                    <span>系统概览</span>
+                </button>
+                <button class="tab-button" data-tab="user-management">
+                    <i class="icon">👥</i>
+                    <span>用户管理</span>
+                </button>
+                <button class="tab-button" data-tab="course-management">
+                    <i class="icon">📚</i>
+                    <span>课程管理</span>
+                </button>
+                <button class="tab-button" data-tab="class-management">
+                    <i class="icon">🏫</i>
+                    <span>班级管理</span>
+                </button>
+                <button class="tab-button" data-tab="score-management">
+                    <i class="icon">📈</i>
+                    <span>成绩管理</span>
+                </button>
+                <button class="tab-button" data-tab="system-settings">
+                    <i class="icon">⚙️</i>
+                    <span>系统设置</span>
+                </button>
+            </div>
+            
+            <!-- 标签内容区域 -->
+            <div class="content-wrapper">
+                <!-- 系统概览面板 -->
+                <section id="admin-dashboard" class="tab-content">
+                    <div class="section-header">
+                        <h2>系统概览</h2>
+                        <div class="system-info">
+                            <span>最后登录时间: 2023-12-15 14:30:25</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 统计卡片 -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-content">
+                                <div class="stat-number">486</div>
+                                <div class="stat-label">学生总数</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">👨‍🏫</div>
+                            <div class="stat-content">
+                                <div class="stat-number">42</div>
+                                <div class="stat-label">教师总数</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📚</div>
+                            <div class="stat-content">
+                                <div class="stat-number">126</div>
+                                <div class="stat-label">课程总数</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🏫</div>
+                            <div class="stat-content">
+                                <div class="stat-number">18</div>
+                                <div class="stat-label">班级总数</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 图表区域 -->
+                    <div class="charts-section">
+                        <div class="chart-container">
+                            <h3>用户增长趋势</h3>
+                            <canvas id="userGrowthChart" width="400" height="250"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>专业分布</h3>
+                            <canvas id="majorDistributionChart" width="400" height="250"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 最近活动 -->
+                    <div class="recent-activities">
+                        <h3>最近活动</h3>
+                        <div class="activities-list">
+                            <div class="activity-item">
+                                <div class="activity-icon">➕</div>
+                                <div class="activity-content">
+                                    <div class="activity-text">新增学生用户 <strong>张小明</strong></div>
+                                    <div class="activity-time">今天 10:23</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon">📝</div>
+                                <div class="activity-content">
+                                    <div class="activity-text">更新课程信息 <strong>计算机基础</strong></div>
+                                    <div class="activity-time">昨天 15:45</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon">👤</div>
+                                <div class="activity-content">
+                                    <div class="activity-text">教师 <strong>李明</strong> 登录系统</div>
+                                    <div class="activity-time">昨天 09:12</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon">📊</div>
+                                <div class="activity-content">
+                                    <div class="activity-text">管理员 <strong>admin</strong> 备份系统数据</div>
+                                    <div class="activity-time">2023-12-14 16:30</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 用户管理面板 -->
+                <section id="user-management" class="tab-content hidden">
+                    <div class="section-header">
+                        <h2>用户管理</h2>
+                        <div class="user-actions">
+                            <div class="search-filter">
+                                <input type="text" id="user-search" placeholder="搜索用户（账号/姓名）">
+                                <button id="user-search-btn" class="search-btn">搜索</button>
+                            </div>
+                            <select id="user-role-filter" class="filter-select">
+                                <option value="all">全部角色</option>
+                                <option value="student">学生</option>
+                                <option value="teacher">教师</option>
+                                <option value="admin">管理员</option>
+                            </select>
+                            <button id="add-user-btn" class="action-btn primary">
+                                <i class="icon">➕</i>
+                                <span>添加用户</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="select-all"></th>
+                                    <th>账号</th>
+                                    <th>姓名</th>
+                                    <th>角色</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox" class="user-select"></td>
+                                    <td>admin</td>
+                                    <td>管理员</td>
+                                    <td class="role-admin">管理员</td>
+                                    <td><span class="status-badge active">活跃</span></td>
+                                    <td>2023-09-01</td>
+                                    <td>
+                                        <button class="table-btn primary">编辑</button>
+                                        <button class="table-btn danger" disabled>删除</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="user-select"></td>
+                                    <td>student</td>
+                                    <td>张小明</td>
+                                    <td class="role-student">学生</td>
+                                    <td><span class="status-badge active">活跃</span></td>
+                                    <td>2023-09-05</td>
+                                    <td>
+                                        <button class="table-btn primary">编辑</button>
+                                        <button class="table-btn danger">删除</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="user-select"></td>
+                                    <td>teacher</td>
+                                    <td>李明</td>
+                                    <td class="role-teacher">教师</td>
+                                    <td><span class="status-badge active">活跃</span></td>
+                                    <td>2023-09-03</td>
+                                    <td>
+                                        <button class="table-btn primary">编辑</button>
+                                        <button class="table-btn danger">删除</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="table-footer">
+                        <div class="selected-info">
+                            已选择 <span id="selected-count">0</span> 项
+                        </div>
+                        <div class="batch-actions">
+                            <button id="batch-delete-btn" class="action-btn danger" disabled>
+                                <i class="icon">🗑️</i>
+                                <span>批量删除</span>
+                            </button>
+                            <button id="batch-export-btn" class="action-btn">
+                                <i class="icon">📤</i>
+                                <span>导出数据</span>
+                            </button>
+                        </div>
+                        <div class="pagination">
+                            <button class="page-btn disabled">上一页</button>
+                            <button class="page-btn active">1</button>
+                            <button class="page-btn">2</button>
+                            <button class="page-btn">3</button>
+                            <button class="page-btn">下一页</button>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 课程管理面板 -->
+                <section id="course-management" class="tab-content hidden">
+                    <div class="section-header">
+                        <h2>课程管理</h2>
+                        <div class="course-actions">
+                            <div class="search-filter">
+                                <input type="text" id="course-search" placeholder="搜索课程（代码/名称）">
+                                <button id="course-search-btn" class="search-btn">搜索</button>
+                            </div>
+                            <button id="add-course-btn" class="action-btn primary">
+                                <i class="icon">➕</i>
+                                <span>添加课程</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="select-all-courses"></th>
+                                    <th>课程代码</th>
+                                    <th>课程名称</th>
+                                    <th>学分</th>
+                                    <th>教师</th>
+                                    <th>学生人数</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox" class="course-select"></td>
+                                    <td>CS101</td>
+                                    <td>计算机基础</td>
+                                    <td>4</td>
+                                    <td>王老师</td>
+                                    <td>40</td>
+                                    <td><span class="status-badge active">进行中</span></td>
+                                    <td>
+                                        <button class="table-btn primary">编辑</button>
+                                        <button class="table-btn danger">删除</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="course-select"></td>
+                                    <td>CS102</td>
+                                    <td>高等数学</td>
+                                    <td>5</td>
+                                    <td>李老师</td>
+                                    <td>35</td>
+                                    <td><span class="status-badge active">进行中</span></td>
+                                    <td>
+                                        <button class="table-btn primary">编辑</button>
+                                        <button class="table-btn danger">删除</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="course-select"></td>
+                                    <td>CS103</td>
+                                    <td>程序设计</td>
+                                    <td>4</td>
+                                    <td>张老师</td>
+                                    <td>45</td>
+                                    <td><span class="status-badge active">进行中</span></td>
+                                    <td>
+                                        <button class="table-btn primary">编辑</button>
+                                        <button class="table-btn danger">删除</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <!-- 班级管理面板 -->
+                <section id="class-management" class="tab-content hidden">
+                    <div class="section-header">
+                        <h2>班级管理</h2>
+                        <div class="class-actions">
+                            <div class="search-filter">
+                                <input type="text" id="class-search" placeholder="搜索班级">
+                                <button id="class-search-btn" class="search-btn">搜索</button>
+                            </div>
+                            <button id="add-class-btn" class="action-btn primary">
+                                <i class="icon">➕</i>
+                                <span>添加班级</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>班级名称</th>
+                                    <th>专业</th>
+                                    <th>年级</th>
+                                    <th>学生人数</th>
+                                    <th>班主任</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>计科2301</td>
+                                    <td>计算机科学与技术</td>
+                                    <td>2023</td>
+                                    <td>40</td>
+                                    <td>王老师</td>
+                                    <td>2023-09-01</td>
+                                    <td>
+                                        <button class="table-btn primary">查看</button>
+                                        <button class="table-btn success">学生管理</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>计科2302</td>
+                                    <td>计算机科学与技术</td>
+                                    <td>2023</td>
+                                    <td>35</td>
+                                    <td>李老师</td>
+                                    <td>2023-09-01</td>
+                                    <td>
+                                        <button class="table-btn primary">查看</button>
+                                        <button class="table-btn success">学生管理</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>软工2301</td>
+                                    <td>软件工程</td>
+                                    <td>2023</td>
+                                    <td>45</td>
+                                    <td>张老师</td>
+                                    <td>2023-09-01</td>
+                                    <td>
+                                        <button class="table-btn primary">查看</button>
+                                        <button class="table-btn success">学生管理</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <!-- 成绩管理面板 -->
+                <section id="score-management" class="tab-content hidden">
+                    <div class="section-header">
+                        <h2>成绩管理</h2>
+                        <div class="score-actions">
+                            <div class="search-filter">
+                                <select id="score-course-filter" class="filter-select">
+                                    <option value="all">全部课程</option>
+                                    <option value="CS101">CS101 - 计算机基础</option>
+                                    <option value="CS102">CS102 - 高等数学</option>
+                                    <option value="CS103">CS103 - 程序设计</option>
+                                </select>
+                                <select id="score-semester-filter" class="filter-select">
+                                    <option value="all">全部学期</option>
+                                    <option value="2023-2024第一学期">2023-2024第一学期</option>
+                                    <option value="2023-2024第二学期">2023-2024第二学期</option>
+                                </select>
+                            </div>
+                            <button id="import-scores-btn" class="action-btn primary">
+                                <i class="icon">📥</i>
+                                <span>导入成绩</span>
+                            </button>
+                            <button id="export-scores-btn" class="action-btn">
+                                <i class="icon">📤</i>
+                                <span>导出成绩</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>学号</th>
+                                    <th>姓名</th>
+                                    <th>课程名称</th>
+                                    <th>学期</th>
+                                    <th>成绩</th>
+                                    <th>录入教师</th>
+                                    <th>录入时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>20230001</td>
+                                    <td>张小明</td>
+                                    <td>高等数学</td>
+                                    <td>2023-2024第一学期</td>
+                                    <td class="score-excellent">90</td>
+                                    <td>李老师</td>
+                                    <td>2023-12-10</td>
+                                    <td>
+                                        <button class="table-btn primary">查看详情</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>20230002</td>
+                                    <td>李小华</td>
+                                    <td>计算机基础</td>
+                                    <td>2023-2024第一学期</td>
+                                    <td class="score-good">85</td>
+                                    <td>王老师</td>
+                                    <td>2023-12-09</td>
+                                    <td>
+                                        <button class="table-btn primary">查看详情</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>20230003</td>
+                                    <td>王小强</td>
+                                    <td>程序设计</td>
+                                    <td>2023-2024第一学期</td>
+                                    <td class="score-excellent">92</td>
+                                    <td>张老师</td>
+                                    <td>2023-12-11</td>
+                                    <td>
+                                        <button class="table-btn primary">查看详情</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <!-- 系统设置面板 -->
+                <section id="system-settings" class="tab-content hidden">
+                    <div class="section-header">
+                        <h2>系统设置</h2>
+                    </div>
+                    
+                    <div class="settings-container">
+                        <div class="settings-card">
+                            <h3>系统信息</h3>
+                            <div class="settings-info">
+                                <div class="info-row">
+                                    <label>系统版本：</label>
+                                    <span>v1.0.0</span>
+                                </div>
+                                <div class="info-row">
+                                    <label>最后更新：</label>
+                                    <span>2023-12-01</span>
+                                </div>
+                                <div class="info-row">
+                                    <label>数据库版本：</label>
+                                    <span>MySQL 8.0</span>
+                                </div>
+                                <div class="info-row">
+                                    <label>服务器IP：</label>
+                                    <span>192.168.1.100</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-card">
+                            <h3>备份设置</h3>
+                            <div class="settings-form">
+                                <div class="form-group">
+                                    <label>自动备份频率：</label>
+                                    <select class="form-select">
+                                        <option value="daily">每天</option>
+                                        <option value="weekly" selected>每周</option>
+                                        <option value="monthly">每月</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>备份保留天数：</label>
+                                    <input type="number" class="form-input" value="30" min="1" max="365">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="form-btn primary">保存设置</button>
+                                    <button class="form-btn danger">立即备份</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-card">
+                            <h3>安全设置</h3>
+                            <div class="settings-form">
+                                <div class="form-group">
+                                    <label>登录尝试限制：</label>
+                                    <input type="number" class="form-input" value="5" min="1" max="20">
+                                </div>
+                                <div class="form-group">
+                                    <label>密码过期时间（天）：</label>
+                                    <input type="number" class="form-input" value="90" min="7" max="365">
+                                </div>
+                                <div class="form-group">
+                                    <label>启用双因素认证：</label>
+                                    <input type="checkbox" class="form-checkbox">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="form-btn primary">保存设置</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 添加用户模态框 -->
+    <div id="add-user-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加用户</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="add-user-form">
+                    <div class="form-group">
+                        <label>账号：</label>
+                        <input type="text" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>密码：</label>
+                        <input type="password" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>姓名：</label>
+                        <input type="text" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>角色：</label>
+                        <select class="form-select" required>
+                            <option value="student">学生</option>
+                            <option value="teacher">教师</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="student-info" style="display:none;">
+                        <label>学号：</label>
+                        <input type="text" class="form-input">
+                    </div>
+                    <div class="form-group" id="teacher-info" style="display:none;">
+                        <label>工号：</label>
+                        <input type="text" class="form-input">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="form-btn primary">保存</button>
+                        <button type="button" class="form-btn cancel">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="admin_dashboard.js"></script>
+</body>
+</html>

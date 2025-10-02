@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理系统 - 教师仪表盘</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- 引入Chart.js用于数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 顶部导航栏 -->
+        <div class="top-nav">
+            <div class="nav-title">
+                <h1>学生管理系统</h1>
+            </div>
+            <div class="nav-actions">
+                <button id="help-btn" class="action-btn">
+                    <i class="icon">❓</i>
+                    <span>帮助</span>
+                </button>
+                <button id="refresh-btn" class="action-btn">
+                    <i class="icon">🔄</i>
+                    <span>刷新</span>
+                </button>
+                <button id="logout-btn" class="action-btn danger">
+                    <i class="icon">🚪</i>
+                    <span>退出登录</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 标签页容器 -->
+        <div class="tabs-container">
+            <!-- 标签栏 -->
+            <div class="tab-bar">
+                <button class="tab-button active" data-tab="teacher-info">个人信息</button>
+                <button class="tab-button" data-tab="my-courses">我的课程</button>
+                <button class="tab-button" data-tab="grade-entry">成绩录入</button>
+                <button class="tab-button" data-tab="student-management">学生管理</button>
+                <button class="tab-button" data-tab="teaching-analysis">教学分析</button>
+            </div>
+            
+            <!-- 标签内容 -->
+            <div class="tab-content active" id="teacher-info">
+                <div class="tab-header">
+                    <h2>个人信息</h2>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-avatar">
+                        <span>李老师</span>
+                    </div>
+                    <div class="info-details">
+                        <div class="info-row">
+                            <label>工号：</label>
+                            <span>T001</span>
+                        </div>
+                        <div class="info-row">
+                            <label>姓名：</label>
+                            <span>李明</span>
+                        </div>
+                        <div class="info-row">
+                            <label>性别：</label>
+                            <span>男</span>
+                        </div>
+                        <div class="info-row">
+                            <label>出生日期：</label>
+                            <span>1985-05-20</span>
+                        </div>
+                        <div class="info-row">
+                            <label>职称：</label>
+                            <span>副教授</span>
+                        </div>
+                        <div class="info-row">
+                            <label>所属学院：</label>
+                            <span>计算机学院</span>
+                        </div>
+                        <div class="info-row">
+                            <label>入职年份：</label>
+                            <span>2012</span>
+                        </div>
+                        <div class="info-row">
+                            <label>邮箱：</label>
+                            <span>liming@example.edu.cn</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="my-courses">
+                <div class="tab-header">
+                    <h2>我的课程</h2>
+                </div>
+                
+                <div class="course-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">3</span>
+                        <span class="stat-label">授课门数</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">120</span>
+                        <span class="stat-label">学生人数</span>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>课程代码</th>
+                                <th>课程名称</th>
+                                <th>学分</th>
+                                <th>班级</th>
+                                <th>上课时间</th>
+                                <th>上课地点</th>
+                                <th>学生人数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CS102</td>
+                                <td>高等数学</td>
+                                <td>5</td>
+                                <td>计科2301</td>
+                                <td>周二 3-4节</td>
+                                <td>B202</td>
+                                <td>40</td>
+                                <td>
+                                    <button class="table-btn primary">查看详情</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>CS201</td>
+                                <td>线性代数</td>
+                                <td>4</td>
+                                <td>计科2302</td>
+                                <td>周三 1-2节</td>
+                                <td>B203</td>
+                                <td>35</td>
+                                <td>
+                                    <button class="table-btn primary">查看详情</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>CS301</td>
+                                <td>概率论</td>
+                                <td>3</td>
+                                <td>计科2201</td>
+                                <td>周五 5-6节</td>
+                                <td>B204</td>
+                                <td>45</td>
+                                <td>
+                                    <button class="table-btn primary">查看详情</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="grade-entry">
+                <div class="tab-header">
+                    <h2>成绩录入</h2>
+                </div>
+                
+                <div class="grade-filters">
+                    <select id="course-select" class="filter-select">
+                        <option value="CS102">CS102 - 高等数学</option>
+                        <option value="CS201">CS201 - 线性代数</option>
+                        <option value="CS301">CS301 - 概率论</option>
+                    </select>
+                    <select id="semester-select" class="filter-select">
+                        <option value="2023-2024第一学期">2023-2024第一学期</option>
+                        <option value="2023-2024第二学期">2023-2024第二学期</option>
+                    </select>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table grade-table">
+                        <thead>
+                            <tr>
+                                <th>学号</th>
+                                <th>姓名</th>
+                                <th>平时成绩</th>
+                                <th>期中成绩</th>
+                                <th>期末成绩</th>
+                                <th>总评成绩</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>20230001</td>
+                                <td>张小明</td>
+                                <td><input type="number" class="grade-input" value="85" min="0" max="100"></td>
+                                <td><input type="number" class="grade-input" value="88" min="0" max="100"></td>
+                                <td><input type="number" class="grade-input" value="90" min="0" max="100"></td>
+                                <td class="score-excellent">90</td>
+                                <td>
+                                    <button class="table-btn success">保存</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>20230002</td>
+                                <td>李小华</td>
+                                <td><input type="number" class="grade-input" value="82" min="0" max="100"></td>
+                                <td><input type="number" class="grade-input" value="78" min="0" max="100"></td>
+                                <td><input type="number" class="grade-input" value="85" min="0" max="100"></td>
+                                <td class="score-good">85</td>
+                                <td>
+                                    <button class="table-btn success">保存</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>20230003</td>
+                                <td>王小强</td>
+                                <td><input type="number" class="grade-input" value="90" min="0" max="100"></td>
+                                <td><input type="number" class="grade-input" value="92" min="0" max="100"></td>
+                                <td><input type="number" class="grade-input" value="95" min="0" max="100"></td>
+                                <td class="score-excellent">95</td>
+                                <td>
+                                    <button class="table-btn success">保存</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="grade-actions">
+                    <button id="batch-save-btn" class="action-btn primary">
+                        <i class="icon">💾</i>
+                        <span>批量保存</span>
+                    </button>
+                    <button id="export-btn" class="action-btn">
+                        <i class="icon">📤</i>
+                        <span>导出成绩</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="student-management">
+                <div class="tab-header">
+                    <h2>学生管理</h2>
+                </div>
+                
+                <div class="search-filter">
+                    <input type="text" id="student-search" placeholder="搜索学生（学号/姓名）">
+                    <button id="search-btn" class="search-btn">搜索</button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>学号</th>
+                                <th>姓名</th>
+                                <th>性别</th>
+                                <th>班级</th>
+                                <th>专业</th>
+                                <th>联系电话</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>20230001</td>
+                                <td>张小明</td>
+                                <td>男</td>
+                                <td>计科2301</td>
+                                <td>计算机科学与技术</td>
+                                <td>138****1234</td>
+                                <td>
+                                    <button class="table-btn primary">查看详情</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>20230002</td>
+                                <td>李小华</td>
+                                <td>女</td>
+                                <td>计科2301</td>
+                                <td>计算机科学与技术</td>
+                                <td>139****5678</td>
+                                <td>
+                                    <button class="table-btn primary">查看详情</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>20230003</td>
+                                <td>王小强</td>
+                                <td>男</td>
+                                <td>计科2301</td>
+                                <td>计算机科学与技术</td>
+                                <td>158****9012</td>
+                                <td>
+                                    <button class="table-btn primary">查看详情</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination">
+                    <button class="page-btn disabled">上一页</button>
+                    <button class="page-btn active">1</button>
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">3</button>
+                    <button class="page-btn">下一页</button>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="teaching-analysis">
+                <div class="tab-header">
+                    <h2>教学分析</h2>
+                </div>
+                
+                <div class="analysis-cards">
+                    <div class="analysis-card">
+                        <h3>成绩分布</h3>
+                        <canvas id="teachingScoreChart" width="400" height="300"></canvas>
+                    </div>
+                    <div class="analysis-card">
+                        <h3>各班级对比</h3>
+                        <canvas id="classComparisonChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+                
+                <div class="analysis-summary">
+                    <h3>教学情况总结</h3>
+                    <div class="summary-content">
+                        <p>根据本学期的教学数据分析，您所教授的课程整体表现良好。高等数学课程的平均分达到了85分，优秀率超过30%。</p>
+                        <p>建议对成绩较低的学生进行针对性辅导，进一步提高整体教学质量。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="teacher_dashboard.js"></script>
+</body>
+</html>

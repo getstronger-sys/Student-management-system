@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理系统 - 学生仪表盘</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- 引入Chart.js用于成绩分析图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 顶部导航栏 -->
+        <div class="top-nav">
+            <div class="nav-title">
+                <h1>学生管理系统</h1>
+            </div>
+            <div class="nav-actions">
+                <button id="help-btn" class="action-btn">
+                    <i class="icon">❓</i>
+                    <span>帮助</span>
+                </button>
+                <button id="refresh-btn" class="action-btn">
+                    <i class="icon">🔄</i>
+                    <span>刷新</span>
+                </button>
+                <button id="logout-btn" class="action-btn danger">
+                    <i class="icon">🚪</i>
+                    <span>退出登录</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 标签页容器 -->
+        <div class="tabs-container">
+            <!-- 标签栏 -->
+            <div class="tab-bar">
+                <button class="tab-button active" data-tab="personal-info">个人信息</button>
+                <button class="tab-button" data-tab="scores">成绩查询</button>
+                <button class="tab-button" data-tab="courses">我的课程</button>
+                <button class="tab-button" data-tab="score-analysis">成绩分析</button>
+            </div>
+            
+            <!-- 标签内容 -->
+            <div class="tab-content active" id="personal-info">
+                <div class="tab-header">
+                    <h2>个人信息</h2>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-avatar">
+                        <span>张小明</span>
+                    </div>
+                    <div class="info-details">
+                        <div class="info-row">
+                            <label>学号：</label>
+                            <span>20230001</span>
+                        </div>
+                        <div class="info-row">
+                            <label>姓名：</label>
+                            <span>张小明</span>
+                        </div>
+                        <div class="info-row">
+                            <label>性别：</label>
+                            <span>男</span>
+                        </div>
+                        <div class="info-row">
+                            <label>出生日期：</label>
+                            <span>2005-01-15</span>
+                        </div>
+                        <div class="info-row">
+                            <label>专业：</label>
+                            <span>计算机科学与技术</span>
+                        </div>
+                        <div class="info-row">
+                            <label>班级：</label>
+                            <span>计科2301</span>
+                        </div>
+                        <div class="info-row">
+                            <label>入学年份：</label>
+                            <span>2023</span>
+                        </div>
+                        <div class="info-row">
+                            <label>邮箱：</label>
+                            <span>zhangxm@example.edu.cn</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="scores">
+                <div class="tab-header">
+                    <h2>成绩查询</h2>
+                </div>
+                
+                <div class="score-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">3.6</span>
+                        <span class="stat-label">GPA</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">88</span>
+                        <span class="stat-label">平均分</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">13</span>
+                        <span class="stat-label">已修学分</span>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>课程代码</th>
+                                <th>课程名称</th>
+                                <th>学分</th>
+                                <th>成绩</th>
+                                <th>学期</th>
+                                <th>任课教师</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CS101</td>
+                                <td>计算机基础</td>
+                                <td>4</td>
+                                <td class="score-good">85</td>
+                                <td>2023-2024第一学期</td>
+                                <td>王老师</td>
+                            </tr>
+                            <tr>
+                                <td>CS102</td>
+                                <td>高等数学</td>
+                                <td>5</td>
+                                <td class="score-excellent">90</td>
+                                <td>2023-2024第一学期</td>
+                                <td>李老师</td>
+                            </tr>
+                            <tr>
+                                <td>CS103</td>
+                                <td>程序设计</td>
+                                <td>4</td>
+                                <td class="score-good">88</td>
+                                <td>2023-2024第一学期</td>
+                                <td>张老师</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="courses">
+                <div class="tab-header">
+                    <h2>我的课程</h2>
+                </div>
+                
+                <div class="course-actions">
+                    <button id="add-course-btn" class="action-btn primary">
+                        <i class="icon">➕</i>
+                        <span>选课</span>
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>课程代码</th>
+                                <th>课程名称</th>
+                                <th>学分</th>
+                                <th>任课教师</th>
+                                <th>上课时间</th>
+                                <th>上课地点</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CS101</td>
+                                <td>计算机基础</td>
+                                <td>4</td>
+                                <td>王老师</td>
+                                <td>周一 1-2节</td>
+                                <td>A101</td>
+                                <td>
+                                    <button class="table-btn danger">退课</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>CS102</td>
+                                <td>高等数学</td>
+                                <td>5</td>
+                                <td>李老师</td>
+                                <td>周二 3-4节</td>
+                                <td>B202</td>
+                                <td>
+                                    <button class="table-btn danger">退课</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>CS103</td>
+                                <td>程序设计</td>
+                                <td>4</td>
+                                <td>张老师</td>
+                                <td>周四 5-6节</td>
+                                <td>C303</td>
+                                <td>
+                                    <button class="table-btn danger">退课</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 课程表 -->
+                <div class="sub-section">
+                    <h3>课程表</h3>
+                    <div class="timetable-container">
+                        <table class="timetable">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>周一</th>
+                                    <th>周二</th>
+                                    <th>周三</th>
+                                    <th>周四</th>
+                                    <th>周五</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1-2节</td>
+                                    <td class="timetable-cell">
+                                        <div class="timetable-course">
+                                            <div class="course-name">计算机基础</div>
+                                            <div class="course-info">A101 | 王老师</div>
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>3-4节</td>
+                                    <td></td>
+                                    <td class="timetable-cell">
+                                        <div class="timetable-course">
+                                            <div class="course-name">高等数学</div>
+                                            <div class="course-info">B202 | 李老师</div>
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>5-6节</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="timetable-cell">
+                                        <div class="timetable-course">
+                                            <div class="course-name">程序设计</div>
+                                            <div class="course-info">C303 | 张老师</div>
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>7-8节</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>9-10节</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="score-analysis">
+                <div class="tab-header">
+                    <h2>成绩分析</h2>
+                </div>
+                
+                <div class="analysis-cards">
+                    <div class="analysis-card">
+                        <h3>成绩分布</h3>
+                        <canvas id="scoreDistributionChart" width="400" height="300"></canvas>
+                    </div>
+                    <div class="analysis-card">
+                        <h3>学期对比</h3>
+                        <canvas id="semesterComparisonChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+                
+                <div class="analysis-summary">
+                    <h3>学习情况总结</h3>
+                    <div class="summary-content">
+                        <p>根据您的成绩数据，您的学习表现优秀！程序设计课程取得了较高的分数，建议您继续保持。高等数学和计算机基础课程的成绩也很理想。</p>
+                        <p>下学期可以考虑挑战更多的专业课程，进一步提升您的专业能力。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 选课模态框 -->
+    <div id="course-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>选择课程</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>课程代码</th>
+                                <th>课程名称</th>
+                                <th>学分</th>
+                                <th>任课教师</th>
+                                <th>上课时间</th>
+                                <th>上课地点</th>
+                                <th>可选人数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CS104</td>
+                                <td>数据结构</td>
+                                <td>4</td>
+                                <td>赵老师</td>
+                                <td>周三 1-2节</td>
+                                <td>C304</td>
+                                <td>15/40</td>
+                                <td>
+                                    <button class="table-btn success">选课</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>CS105</td>
+                                <td>计算机网络</td>
+                                <td>3</td>
+                                <td>钱老师</td>
+                                <td>周五 3-4节</td>
+                                <td>B203</td>
+                                <td>8/35</td>
+                                <td>
+                                    <button class="table-btn success">选课</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
