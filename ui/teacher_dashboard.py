@@ -619,8 +619,10 @@ class TeacherDashboard(QWidget):
                 self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
                 # 班级
                 self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
-                # 操作列（空）
-                self.students_table.setItem(row, 6, QTableWidgetItem(''))
+                # 操作列（删除按钮）
+                delete_button = QPushButton("删除")
+                delete_button.clicked.connect(lambda checked, student_id=s.get('id'), student_name=s.get('name', ''): self.delete_student(student_id, student_name))
+                self.students_table.setCellWidget(row, 6, delete_button)
             # 调整列宽
             self.students_table.resizeColumnsToContents()
         except Exception as e:
@@ -700,7 +702,10 @@ class TeacherDashboard(QWidget):
                 self.students_table.setItem(row, 3, QTableWidgetItem(age_text))
                 self.students_table.setItem(row, 4, QTableWidgetItem(s.get('major', '')))
                 self.students_table.setItem(row, 5, QTableWidgetItem(s.get('class', '')))
-                self.students_table.setItem(row, 6, QTableWidgetItem(''))
+                # 操作列（删除按钮）
+                delete_button = QPushButton("删除")
+                delete_button.clicked.connect(lambda checked, student_id=s.get('id'), student_name=s.get('name', ''): self.delete_student(student_id, student_name))
+                self.students_table.setCellWidget(row, 6, delete_button)
                 self.students_table.resizeColumnsToContents()
         except Exception as e:
             logger.error(f"搜索学生失败: {e}")
@@ -790,6 +795,77 @@ class TeacherDashboard(QWidget):
             logger.error(f"编辑成绩失败: {e}")
             QMessageBox.critical(self, "错误", f"编辑成绩失败: {str(e)}")
     
+    def delete_student(self, student_id, student_name):
+        """删除学生"""
+        try:
+            # 显示确认对话框
+            reply = QMessageBox.question(
+                self, '确认删除', f'确定要删除学生 {student_name} 吗？',
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # 获取当前选择的课程ID和学期
+                course_id = None
+                semester = None
+                
+                if hasattr(self, 'students_course_combo') and self.students_course_combo.count() > 0:
+                    idx = self.students_course_combo.currentIndex()
+                    if idx >= 0:
+                        course_id = self.students_course_combo.itemData(idx)
+                
+                # 获取当前学期（从课程信息中获取）
+                if course_id:
+                    # 获取当前课程信息
+                    try:
+                        response = client.get_course_details(course_id)
+                        if response.get('success'):
+                            course_details = response.get('courses', [{}])[0]
+                            semester = course_details.get('semester', '')
+                    except:
+                        # 如果无法从服务器获取，尝试从本地数据库获取
+                        course = Course.get_course_by_id(course_id)
+                        if course:
+                            semester = course.get('semester', '')
+                
+                if not semester:
+                    # 如果还是没有学期信息，使用当前年份的学期
+                    from datetime import datetime
+                    current_year = datetime.now().year
+                    current_month = datetime.now().month
+                    if current_month <= 6:
+                        semester = f'{current_year-1}-{current_year} 第二学期'
+                    else:
+                        semester = f'{current_year}-{current_year+1} 第一学期'
+                
+                if course_id:
+                    # 使用学生退课功能来实现删除学生
+                    response = client.unenroll_course(course_id, semester)
+                    
+                    if response.get('success'):
+                        QMessageBox.information(self, '成功', f'学生 {student_name} 已从课程中删除')
+                        self.load_students()  # 重新加载学生列表
+                    else:
+                        # 本地回退：使用Enrollment.unenroll方法删除选课记录
+                        try:
+                            from models.enrollment import Enrollment
+                            # 注意：unenroll方法需要的是学生内部ID，而不是传入的student_id
+                            # 这里假设传入的student_id已经是内部ID
+                            success = Enrollment.unenroll(student_id, course_id, semester)
+                            if success:
+                                QMessageBox.information(self, '成功', f'学生 {student_name} 已从课程中删除')
+                                self.load_students()  # 重新加载学生列表
+                            else:
+                                QMessageBox.warning(self, '失败', f'删除学生失败: {response.get("message", "未知错误")}')
+                        except Exception as e:
+                            logger.error(f"本地删除学生失败: {e}")
+                            QMessageBox.warning(self, '失败', f'删除学生失败: {str(e)}')
+                else:
+                    QMessageBox.warning(self, '失败', '无法获取当前课程信息')
+        except Exception as e:
+            logger.error(f"删除学生时发生错误: {e}")
+            QMessageBox.critical(self, '错误', f'删除学生时发生错误: {str(e)}')
+
     def update_charts(self, scores):
         """更新数据可视化图表"""
         # 更新成绩分布图表
