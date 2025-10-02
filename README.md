@@ -1,10 +1,11 @@
 # 学生管理系统
 
-一个基于Python和PyQt5开发的学生管理系统，支持管理员、教师和学生三种角色，实现了用户管理、学生信息管理、课程管理和成绩管理等功能。系统采用客户端-服务器架构，支持多用户同时访问和数据共享。
+一个基于Python和PyQt5开发的学生管理系统，支持管理员、教师和学生三种角色，实现了用户管理、学生信息管理、课程管理和成绩管理等功能。系统采用客户端-服务器架构，支持多用户同时访问和数据共享。同时提供了Web前端界面，方便用户通过浏览器访问系统。
 
 ## 系统架构
 
-- **前端**：PyQt5 GUI界面
+- **PyQt5前端**：桌面应用GUI界面
+- **Web前端**：HTML/CSS/JavaScript实现的浏览器界面
 - **后端**：Python网络服务器
 - **数据库**：MySQL
 - **通信**：基于Socket的客户端-服务器通信
@@ -77,7 +78,16 @@ python main.py --server
 python main.py
 ```
 
-### 3. 登录系统
+### 3. 使用Web前端
+
+```powershell
+# 在项目根目录启动HTTP服务器
+python -m http.server 8000
+```
+
+然后在浏览器中访问：http://localhost:8000/frontend/index.html
+
+### 4. 登录系统
 
 使用以下测试账号登录：
 - **管理员**：用户名`admin`，密码`admin123`
@@ -90,16 +100,29 @@ python main.py
 student_management_system/
 ├── .gitignore         # Git忽略文件规则
 ├── README.md          # 项目说明文档
+├── backups/           # 数据库备份文件目录
+├── cache/             # 缓存文件目录
 ├── config/            # 配置文件
 │   └── config.py      # 系统配置（数据库连接等）
 ├── database/          # 数据库管理模块
 │   └── db_manager.py  # 数据库操作类
 ├── database_sharing_guide.md  # 数据库共享配置指南
 ├── docker-compose.yml # Docker配置文件
+├── frontend/          # Web前端文件
+│   ├── admin_dashboard.html  # 管理员Web界面
+│   ├── admin_dashboard.js    # 管理员Web功能脚本
+│   ├── dashboard.js   # 通用仪表盘脚本
+│   ├── index.html     # Web登录页面
+│   ├── script.js      # 通用Web脚本
+│   ├── student_dashboard.html  # 学生Web界面
+│   ├── styles.css     # Web样式表
+│   ├── teacher_dashboard.html  # 教师Web界面
+│   └── teacher_dashboard.js    # 教师Web功能脚本
 ├── init_database.py   # 数据库初始化脚本
 ├── main.py            # 主程序入口
 ├── models/            # 数据模型和业务逻辑
 │   ├── courses.py     # 课程相关模型
+│   ├── enrollment.py  # 选课相关模型
 │   ├── scores.py      # 成绩相关模型
 │   ├── student.py     # 学生相关模型
 │   ├── teacher.py     # 教师相关模型
@@ -113,6 +136,7 @@ student_management_system/
 │   ├── admin_dashboard.py   # 管理员界面
 │   ├── login_window.py      # 登录界面
 │   ├── main_window.py       # 主窗口
+│   ├── register_dialog.py   # 注册对话框
 │   ├── student_dashboard.py # 学生界面
 │   ├── teacher_dashboard.py # 教师界面
 │   └── user_profile.py      # 用户信息界面
@@ -142,6 +166,11 @@ student_management_system/
 ## 更新日志
 
 ### 最近更新
+- 开发Web前端界面，包含管理员、教师和学生三种角色的仪表盘
+- 实现Web前端的用户登录、角色验证和页面跳转功能
+- 优化Web界面的标签页导航，统一导航样式
+- 修复JavaScript变量重复声明错误
+- 解决登录后跳回登录界面的问题
 - 添加Docker环境下的数据库备份和恢复功能支持
 - 修复登录界面无响应问题，使用线程处理登录请求
 - 添加Docker支持，便于快速部署开发环境
