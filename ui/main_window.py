@@ -247,6 +247,10 @@ class MainWindow(QMainWindow):
         """连接信号和槽"""
         # 导航栏选择事件
         self.nav_widget.currentItemChanged.connect(self.on_nav_item_changed)
+        
+        # 标签页切换事件，同步侧边栏选中状态
+        if hasattr(self.dashboard, 'tab_widget'):
+            self.dashboard.tab_widget.currentChanged.connect(self.on_tab_changed)
     
     def on_nav_item_changed(self, current, previous):
         """处理导航项变更事件"""
@@ -257,6 +261,30 @@ class MainWindow(QMainWindow):
             # 调用仪表盘的切换页面方法
             if hasattr(self.dashboard, 'switch_page'):
                 self.dashboard.switch_page(data)
+    
+    def on_tab_changed(self, index):
+        """处理标签页变更事件，同步侧边栏选中状态"""
+        # 根据角色和索引映射到对应的页面名称
+        page_name_map = {
+            'student': ['profile', 'scores', 'courses', 'analysis'],
+            'teacher': ['profile', 'courses', 'scores', 'students', 'analysis'],
+            'admin': ['profile', 'users', 'students', 'teachers', 'courses', 'settings']
+        }
+        
+        # 检查当前角色是否在映射表中
+        if self.role in page_name_map and 0 <= index < len(page_name_map[self.role]):
+            # 获取当前标签页对应的页面名称
+            page_name = page_name_map[self.role][index]
+            
+            # 遍历侧边栏项，找到对应的项并选中
+            for i in range(self.nav_widget.count()):
+                item = self.nav_widget.item(i)
+                if item and item.data(Qt.UserRole) == page_name:
+                    # 禁用信号，避免循环调用
+                    self.nav_widget.blockSignals(True)
+                    self.nav_widget.setCurrentItem(item)
+                    self.nav_widget.blockSignals(False)
+                    break
     
     def update_status_bar(self):
         """更新状态栏信息"""
