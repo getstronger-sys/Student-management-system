@@ -20,8 +20,8 @@ class Client:
         """初始化客户端"""
         # 修改为服务器的IP地址，组内其他同学运行时需要将此地址改为服务器同学的IP
         #self.host = '10.29.108.168'  # 客户端连接地址（校园网IP）
-        self.host = '127.0.0.1'
-        self.port = NETWORK_CONFIG['port']
+        self.host = '10.29.108.168'  # 这里改成你电脑的IP
+        self.port = NETWORK_CONFIG['port']  # 一般是8888
         self.client_socket = None
         self.connected = False
         self.current_user = None

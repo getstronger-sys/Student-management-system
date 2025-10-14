@@ -33,14 +33,13 @@ DB_CONFIG = {
     'host': 'localhost',  # 如果是Docker容器间通信，可以使用容器名称如'student_db'
     'user': 'root',  # Docker数据库用户名
     'password': '123456',  # Docker数据库密码
-    #'password': 'zhyzywxj1825907',  # 本地数据库密码（已注释）
     'database': 'student_management',
     'port': 3306  # Docker容器映射的端口
 }
 
 # 网络配置
 NETWORK_CONFIG = {
-    'host': '0.0.0.0',
+    'host': '10.29.108.168',  # 改成你的校园网 IPv4 地址
     'port': 8888
 }
 
